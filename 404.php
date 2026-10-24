@@ -4,13 +4,17 @@ $this->need('header.php');
 
 <?php $this->need('nav.php'); ?>
 </div>
-<h1 class="post-title">404 - <?php _e('页面没找到'); ?></h1>
-<div class="post-content">
-    <p><?php _e('你想查看的页面已被转移或删除了, 要不要搜索看看: '); ?></p>
-    <form method="post">
-        <p><input type="text" name="s" class="text" autofocus/> <button type="submit" class="submit"><?php _e('搜索'); ?></button></p>
+<div class="notfound">
+    <p class="notfound-code" aria-hidden="true">404</p>
+    <h1 class="notfound-title"><?php _e('页面没找到'); ?></h1>
+    <p class="notfound-text"><?php _e('你想查看的页面已被转移或删除了。'); ?></p>
+    <form class="notfound-search" method="post">
+        <input type="text" name="s" placeholder="<?php _e('输入关键字搜索…'); ?>" aria-label="<?php _e('搜索'); ?>" autofocus/>
     </form>
-    <p><i class="ri-compass-3-line not-found-icon" aria-hidden="true"></i></p>
+    <div class="notfound-actions">
+        <a class="nf-btn nf-btn-solid" href="<?php $this->options->siteUrl(); ?>"><?php _e('返回首页'); ?></a>
+        <button type="button" class="nf-btn nf-btn-ghost" id="nf-back"><?php _e('回到上一页'); ?></button>
+    </div>
 </div>
 
 <?php $this->need('footer.php'); ?>

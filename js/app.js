@@ -168,6 +168,21 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // ===== 404 页：回到上一页（无历史则回首页） =====
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest ? e.target.closest('#nf-back') : null;
+        if (!btn) {
+            return;
+        }
+        e.preventDefault();
+        if (history.length > 1) {
+            history.back();
+        } else {
+            var home = document.querySelector('.header .nav a');
+            location.href = home ? home.href : '/';
+        }
+    });
+
     // ===== 代码块装饰：语言标签 + 复制按钮 =====
     function decorateCodeBlocks() {
         var pres = document.querySelectorAll('.post-content pre');
