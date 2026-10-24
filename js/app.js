@@ -1,0 +1,424 @@
+// 须在顶层捕获：DOMContentLoaded 回调执行时 document.currentScript 已为 null
+var YING_THEME_URL = (document.currentScript && document.currentScript.src || '').replace(/\/js\/[^/]+$/, '');
+
+document.addEventListener('DOMContentLoaded', function () {
+    var root = document.documentElement;
+
+    // ===== 夜间 / 白天模式切换 =====
+    var toggle = document.getElementById('theme-toggle');
+
+    function syncToggleIcon() {
+        if (!toggle) {
+            return;
+        }
+        var icon = toggle.querySelector('i');
+        if (icon) {
+            icon.className = root.getAttribute('data-theme') === 'dark' ? 'ri-sun-line' : 'ri-moon-line';
+        }
+    }
+
+    if (toggle) {
+        toggle.addEventListener('click', function () {
+            var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            root.setAttribute('data-theme', next);
+            try {
+                localStorage.setItem('ying-theme', next);
+            } catch (e) {}
+            syncToggleIcon();
+        });
+        syncToggleIcon();
+    }
+
+    // ===== 一言 API：按后台配置获取随机句子（淡入过渡，失败回退固定内容） =====
+    var yiyanEl = document.getElementById('yiyan-text');
+    if (yiyanEl && yiyanEl.dataset.cats !== undefined) {
+        var revealYiyan = function () {
+            yiyanEl.classList.remove('is-loading');
+        };
+        var qs = 'encode=json';
+        if (yiyanEl.dataset.cats) {
+            yiyanEl.dataset.cats.split(',').forEach(function (c) {
+                qs = 'c=' + encodeURIComponent(c) + '&' + qs;
+            });
+        }
+        var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        if (ctrl) {
+            setTimeout(function () { ctrl.abort(); }, 3000);
+        }
+        fetch('https://v1.hitokoto.cn/?' + qs, ctrl ? {signal: ctrl.signal} : {})
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                var text = d && d.hitokoto ? d.hitokoto : '';
+                if (text && yiyanEl.dataset.from === '1') {
+                    var who = d.from_who || '';
+                    var from = d.from || '';
+                    if (who && from) {
+                        text += ' —— ' + who + '《' + from + '》';
+                    } else if (from) {
+                        text += ' —— 《' + from + '》';
+                    } else if (who) {
+                        text += ' —— ' + who;
+                    }
+                }
+                if (text) {
+                    yiyanEl.textContent = text;
+                } else {
+                    yiyanEl.textContent = yiyanEl.dataset.fallback || '';
+                }
+                revealYiyan();
+            })
+            .catch(function () {
+                yiyanEl.textContent = yiyanEl.dataset.fallback || '';
+                revealYiyan();
+            });
+    }
+
+    // ===== 顶部工具坞：展开 / 收起（默认展开） =====
+    var menuHandle = document.getElementById('menu-handle');
+    var menuItems = document.getElementById('top-menu-items');
+
+    if (menuHandle && menuItems) {
+        menuHandle.addEventListener('click', function () {
+            var open = menuItems.classList.toggle('open');
+            menuHandle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            var icon = menuHandle.querySelector('i');
+            if (icon) {
+                icon.className = open ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line';
+            }
+        });
+    }
+
+    // ===== 搜索面板 =====
+    var searchBtn = document.getElementById('search-btn');
+    var searchPanel = document.getElementById('search-panel');
+
+    if (searchBtn && searchPanel) {
+        var searchInput = searchPanel.querySelector('input');
+
+        searchBtn.addEventListener('click', function () {
+            var opened = searchPanel.classList.toggle('open');
+            if (opened && searchInput) {
+                searchInput.focus();
+            }
+        });
+
+        document.addEventListener('click', function (e) {
+            if (searchPanel.classList.contains('open')
+                && !searchPanel.contains(e.target)
+                && !searchBtn.contains(e.target)) {
+                searchPanel.classList.remove('open');
+            }
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                searchPanel.classList.remove('open');
+            }
+        });
+    }
+
+    // ===== 回到顶部 / 直达底部（事件委托，局部换页后无需重新绑定） =====
+    function updateScrollButtons() {
+        var topBtn = document.getElementById('to_top');
+        var bottomBtn = document.getElementById('to_bottom');
+        var y = window.scrollY || window.pageYOffset;
+        var max = document.documentElement.scrollHeight - window.innerHeight;
+        if (topBtn) {
+            topBtn.classList.toggle('show', y > 30);
+        }
+        if (bottomBtn) {
+            bottomBtn.classList.toggle('show', y < max - 100);
+        }
+    }
+
+    window.addEventListener('scroll', updateScrollButtons, {passive: true});
+    window.addEventListener('resize', updateScrollButtons, {passive: true});
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest ? e.target.closest('#to_top, #to_bottom') : null;
+        if (!btn) {
+            return;
+        }
+        e.preventDefault();
+        window.scrollTo({
+            top: btn.id === 'to_top' ? 0 : document.documentElement.scrollHeight,
+            behavior: 'smooth'
+        });
+    });
+
+    updateScrollButtons();
+
+    // ===== 文章末尾：返回列表（本次会话内有站内跳转则回退上一页，直达则回首页） =====
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest ? e.target.closest('#back-btn') : null;
+        if (!btn) {
+            return;
+        }
+        var ajaxNav = false;
+        try {
+            ajaxNav = sessionStorage.getItem('yingBackable') === '1';
+        } catch (err) {}
+        var sameOrigin = false;
+        try {
+            sameOrigin = !!document.referrer && new URL(document.referrer).origin === location.origin;
+        } catch (err) {}
+        if ((ajaxNav || sameOrigin) && history.length > 1) {
+            e.preventDefault();
+            history.back();
+        }
+    });
+
+    // ===== 代码块装饰：语言标签 + 复制按钮 =====
+    function decorateCodeBlocks() {
+        var pres = document.querySelectorAll('.post-content pre');
+        Array.prototype.forEach.call(pres, function (pre) {
+            if (pre.parentElement && pre.parentElement.classList.contains('code-block')) {
+                return;
+            }
+            var code = pre.querySelector('code');
+            var lang = '';
+            if (code && code.className && code.className.indexOf('lang-') === 0) {
+                lang = code.className.slice(5);
+            }
+            var wrap = document.createElement('figure');
+            wrap.className = 'code-block';
+            var header = document.createElement('figcaption');
+            header.className = 'code-block-header';
+            header.innerHTML = '<span class="code-lang">' + (lang || 'text') + '</span>'
+                + '<button type="button" class="code-copy" title="复制代码"><i class="ri-file-copy-line"></i><span>复制</span></button>';
+            pre.parentNode.insertBefore(wrap, pre);
+            wrap.appendChild(header);
+            wrap.appendChild(pre);
+        });
+    }
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest ? e.target.closest('.code-copy') : null;
+        if (!btn) {
+            return;
+        }
+        var block = btn.closest('.code-block');
+        var code = block ? block.querySelector('code') : null;
+        if (!code) {
+            return;
+        }
+        var done = function () {
+            var label = btn.querySelector('span');
+            btn.classList.add('copied');
+            if (label) {
+                label.textContent = '已复制';
+            }
+            setTimeout(function () {
+                btn.classList.remove('copied');
+                if (label) {
+                    label.textContent = '复制';
+                }
+            }, 1600);
+        };
+        var fallbackCopy = function () {
+            var ta = document.createElement('textarea');
+            ta.value = code.innerText;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            var ok = false;
+            try {
+                ok = document.execCommand('copy');
+            } catch (err) {}
+            ta.remove();
+            if (ok) {
+                done();
+            }
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(code.innerText).then(done, fallbackCopy);
+        } else {
+            fallbackCopy();
+        }
+    });
+
+    decorateCodeBlocks();
+
+    // ===== 代码语法高亮：按需加载 highlight.js（VS Code Dark+ 配色见 main.css） =====
+    var themeUrl = YING_THEME_URL;
+    var hljsState = 'idle';
+
+    function highlightCode() {
+        if (!document.querySelector('.code-block code')) {
+            return;
+        }
+        var run = function () {
+            if (!window.hljs) {
+                return;
+            }
+            document.querySelectorAll('.code-block code').forEach(function (code) {
+                if (code.dataset.hlDone) {
+                    return;
+                }
+                var m = /lang-(\w+)/.exec(code.className || '');
+                if (m) {
+                    code.classList.add('language-' + m[1]);
+                }
+                try {
+                    window.hljs.highlightElement(code);
+                    code.dataset.hlDone = '1';
+                } catch (err) {}
+            });
+        };
+        if (window.hljs) {
+            run();
+            return;
+        }
+        if (hljsState === 'loading') {
+            return;
+        }
+        hljsState = 'loading';
+        var s = document.createElement('script');
+        s.src = themeUrl + '/js/vendor/highlight.min.js';
+        s.onload = function () {
+            hljsState = 'done';
+            run();
+        };
+        document.head.appendChild(s);
+    }
+
+    highlightCode();
+
+    // ===== AJAX 局部加载：页头保持不动，仅替换页头以下内容 =====
+    var navLock = false;
+
+    function swapPage(doc, href) {
+        var container = document.querySelector('.container');
+        var newContainer = doc.querySelector('.container');
+
+        if (!container || !newContainer) {
+            location.href = href;
+            return;
+        }
+
+        // 移除旧内容（保留页头 .header）——先快照，children 是动态集合
+        Array.prototype.slice.call(container.children).forEach(function (el) {
+            if (!el.classList.contains('header')) {
+                el.remove();
+            }
+        });
+
+        // 插入新内容（跳过新页面的页头）
+        Array.prototype.slice.call(newContainer.children).forEach(function (el) {
+            if (!el.classList.contains('header')) {
+                container.appendChild(document.adoptNode(el));
+            }
+        });
+
+        // 同步导航高亮（只切换 class，不替换页头节点）
+        var oldLis = document.querySelectorAll('.header .nav li');
+        var newLis = doc.querySelectorAll('.header .nav li');
+        if (oldLis.length === newLis.length) {
+            Array.prototype.forEach.call(oldLis, function (li, i) {
+                li.classList.toggle('active', newLis[i].classList.contains('active'));
+            });
+        }
+
+        // 同步滚动按钮（文章页才有；只增删滚动按钮本身，
+        // 不整体替换容器，避免销毁主题切换/搜索按钮的事件监听）
+        var fa = document.querySelector('.float-actions');
+        var newFa = doc.querySelector('.float-actions');
+        if (fa) {
+            Array.prototype.slice.call(fa.querySelectorAll('#to_top, #to_bottom')).forEach(function (el) {
+                el.remove();
+            });
+            if (newFa) {
+                var scrollBtns = Array.prototype.slice.call(newFa.querySelectorAll('#to_top, #to_bottom')).reverse();
+                scrollBtns.forEach(function (el) {
+                    fa.insertBefore(document.adoptNode(el), fa.firstChild);
+                });
+            }
+        }
+
+        // 同步左下返回按钮（文章页才有；点击走事件委托，替换安全）
+        var oldBack = document.querySelector('.back-float');
+        var newBack = doc.querySelector('.back-float');
+        if (oldBack) {
+            oldBack.innerHTML = newBack ? newBack.innerHTML : '';
+        }
+
+        document.title = doc.title;
+        window.scrollTo(0, 0);
+        updateScrollButtons();
+        decorateCodeBlocks();
+        highlightCode();
+    }
+
+    function navigate(href, push) {
+        if (navLock) {
+            location.href = href;
+            return;
+        }
+        navLock = true;
+        fetch(href, {credentials: 'same-origin'})
+            .then(function (r) {
+                if (!r.ok) {
+                    throw new Error('HTTP ' + r.status);
+                }
+                return r.text();
+            })
+            .then(function (html) {
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+                if (!doc.querySelector('.container') || !doc.querySelector('.header')) {
+                    throw new Error('not a theme page');
+                }
+                swapPage(doc, href);
+                if (push) {
+                    history.pushState({}, '', href);
+                    try {
+                        sessionStorage.setItem('yingBackable', '1');
+                    } catch (e) {}
+                }
+            })
+            .catch(function () {
+                // 任何异常都回退到整页跳转
+                location.href = href;
+            })
+            .finally(function () {
+                navLock = false;
+            });
+    }
+
+    // 拦截站内链接点击
+    document.addEventListener('click', function (e) {
+        if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+            return;
+        }
+        var a = e.target.closest ? e.target.closest('a') : null;
+        if (!a) {
+            return;
+        }
+        var href = a.getAttribute('href');
+        if (!href || href.charAt(0) === '#' || a.target === '_blank') {
+            return;
+        }
+        var url;
+        try {
+            url = new URL(a.href, location.href);
+        } catch (err) {
+            return;
+        }
+        if (url.origin !== location.origin) {
+            return;
+        }
+        if (!/^https?:$/.test(url.protocol)) {
+            return;
+        }
+        if (url.pathname.indexOf('/admin') === 0) {
+            return;
+        }
+        e.preventDefault();
+        navigate(url.href, true);
+    });
+
+    // 浏览器前进 / 后退
+    window.addEventListener('popstate', function () {
+        navigate(location.href, false);
+    });
+});

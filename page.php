@@ -1,0 +1,27 @@
+<?php if (!defined('__TYPECHO_ROOT_DIR__')) exit;
+$this->need('header.php');
+?>
+
+<?php $this->need('nav.php'); ?>
+</div>
+<?php if ($this->is('page', 'start-page')): ?>
+<header class="page-header about-header">
+    <h1 class="page-title" itemprop="name headline"><?php $this->title(); ?></h1>
+    <span class="page-rule" aria-hidden="true"></span>
+    <div class="about-card">
+        <div class="about-row"><span class="about-key">站长</span><span class="about-val"><?php $this->options->title(); ?></span></div>
+        <div class="about-row"><span class="about-key">主题</span><span class="about-val">Ying 颖 · <a href="https://github.com/heysiu/Ying/" target="_blank" rel="noopener">GitHub</a></span></div>
+        <div class="about-row"><span class="about-key">程序</span><span class="about-val">Typecho</span></div>
+    </div>
+</header>
+<?php else: ?>
+<header class="page-header">
+    <h1 class="page-title" itemprop="name headline"><?php $this->title(); ?></h1>
+    <span class="page-rule" aria-hidden="true"></span>
+</header>
+<?php endif; ?>
+<div class="post-content about-content" itemprop="articleBody">
+    <?php $this->content(); ?>
+</div>
+
+<?php $this->need('footer.php'); ?>
