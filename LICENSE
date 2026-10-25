@@ -33,8 +33,9 @@ Third-party assets and services:
   this repository by the owner's decision; font listings mark commercial use as
   requiring authorization — verify before reuse.
 - HarmonyOS Sans SC Medium: Copyright Huawei Device Co., Ltd., subject to the
-  HarmonyOS Fonts License Agreement. Not bundled by default; loaded from the
-  upstream repository via jsDelivr, or from a URL configured in the theme.
+  HarmonyOS Fonts License Agreement. Bundled at
+  assets/fonts/harmonyos-sans-sc-medium.woff; loaded via jsDelivr when the
+  HarmonyOS font source is selected.
 - Fonts uploaded through the theme settings are provided by the site
   administrator and stored in usr/uploads/fonts; they are not part of this
   repository. The administrator is responsible for their licenses.

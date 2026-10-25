@@ -57,7 +57,7 @@
 | ZQL CDN（默认） | 从 jsDelivr 加载仓库内置的 ZQL 子集（`assets/fonts/zql-v2.woff2`），Fastly 兜底 |
 | 本地字体 | 使用字体库中选中的文件；未选择时使用系统字体 |
 | 系统字体 | 不输出 `@font-face`，不加载任何字体文件 |
-| 鸿蒙 CDN | 从 jsDelivr 加载 HarmonyOS Sans SC Medium，Fastly 兜底 |
+| 鸿蒙 CDN | 从 jsDelivr 加载仓库内置的 HarmonyOS Sans SC Medium（`assets/fonts/harmonyos-sans-sc-medium.woff`），Fastly 兜底 |
 | 自定义链接 | 使用“自定义字体地址”中的 URL |
 
 ### 上传与字体库

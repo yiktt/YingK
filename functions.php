@@ -237,8 +237,8 @@ function yingFontSource($options = null): string
 function yingHarmonyFontUrls(): array
 {
     return [
-        'https://cdn.jsdelivr.net/gh/heysiu/Ying@main/font/HarmonyOS_Sans/HarmonyOS_Sans_SC_Medium.woff',
-        'https://fastly.jsdelivr.net/gh/heysiu/Ying@main/font/HarmonyOS_Sans/HarmonyOS_Sans_SC_Medium.woff',
+        'https://cdn.jsdelivr.net/gh/yiktt/YingK@main/assets/fonts/harmonyos-sans-sc-medium.woff',
+        'https://fastly.jsdelivr.net/gh/yiktt/YingK@main/assets/fonts/harmonyos-sans-sc-medium.woff',
     ];
 }
 
@@ -301,7 +301,7 @@ function yingFontStatusText(string $source, array $library, string $selected, st
         return _t('当前使用：ZQL CDN（jsDelivr）');
     }
     if ($source === 'harmony') {
-        return _t('当前使用：HarmonyOS CDN');
+        return _t('当前使用：鸿蒙 CDN（jsDelivr）');
     }
     if ($source === 'custom') {
         return yingUrlIsSafe($url)

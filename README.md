@@ -76,8 +76,8 @@ git clone https://github.com/yiktt/YingK.git YingK
 ## 兼容性与性能
 
 - **固定链接**：默认 `/archives/{cid}/`、`/archives/{slug}.html`、日期归档、分类归档均已实测；归档页使用 Typecho 内容组件生成链接，不依赖手动拼接。
-- **资源**：无构建步骤、无运行时框架。主题目录约 2.4MB（含默认字体 1.2MB）；默认经 jsDelivr 加载 ZQL 子集（首屏约 1.2MB）；本地字体模式只加载选中文件，未选择时系统字体（0 下载）；鸿蒙 CDN 约 5.4MB。文章含代码时额外按需加载约 127KB 的 highlight.js。
-- **字体**：默认 ZQL CDN（仓库托管、jsDelivr 加载，Fastly 兜底）；可切换站点本地字体、系统字体、鸿蒙 CDN 或自定义地址（外部地址需支持 CORS）。后台支持 woff2 / woff / ttf / otf 上传、选择与删除；RemixIcon 仅保留 woff2。
+- **资源**：无构建步骤、无运行时框架。主题目录约 7.8MB（含字体 6.6MB）；默认经 jsDelivr 加载 ZQL 子集（首屏约 1.2MB）；本地字体模式只加载选中文件，未选择时系统字体（0 下载）；鸿蒙 CDN 约 5.4MB。文章含代码时额外按需加载约 127KB 的 highlight.js。
+- **字体**：默认 ZQL CDN（仓库托管、jsDelivr 加载，Fastly 兜底）；鸿蒙 CDN 同样仓库托管；可切换站点本地字体、系统字体、鸿蒙 CDN 或自定义地址（外部地址需支持 CORS）。后台支持 woff2 / woff / ttf / otf 上传、选择与删除；RemixIcon 仅保留 woff2。
 - **无 JS**：页面与正文链接可读，“返回列表”链接可用；主题切换、搜索面板、代码高亮/复制与 AJAX 局部加载不可用。
 - **可访问性**：支持键盘焦点、`aria-current`、`aria-pressed`、`aria-expanded`、减少动态效果偏好；主要触控目标 44px；已移除禁止缩放的 viewport 设置。
 - **响应式**：390 / 752 / 1000 / 1200 宽度与浅色/暗色均已回归验证。
@@ -88,7 +88,7 @@ git clone https://github.com/yiktt/YingK.git YingK
 上游 Ying 的定位就是无评论阅读主题，YingK 保留这一取舍，不包含 `comments.php`。
 
 **字体文件有多大？**
-默认字体是 ZQL 子集（约 1.2MB woff2），随主题仓库托管、经 jsDelivr CDN 加载，`font-display: swap` 让文字先显示。也可在后台切换：站点本地字体（后台上传，大小取决于文件）、系统字体（0 下载）、鸿蒙 CDN（约 5.4MB）、自定义地址。
+默认字体是 ZQL 子集（约 1.2MB woff2），随主题仓库托管、经 jsDelivr CDN 加载，`font-display: swap` 让文字先显示。也可在后台切换：站点本地字体（后台上传，大小取决于文件）、系统字体（0 下载）、鸿蒙 CDN（约 5.4MB，随仓库托管）、自定义地址。
 
 **友链 / 归档 / 关于页怎么建？**
 按[快速开始](#快速开始)中的模板表创建独立页面；友链数据在外观设置里维护，详见[配置说明](docs/configuration.md)。
@@ -112,7 +112,7 @@ git clone https://github.com/yiktt/YingK.git YingK
 
 本仓库中 YingK 的修改与新增代码以 **MIT** 协议发布，详见 [LICENSE](LICENSE)。
 
-默认字体 ZQL（走路带风小可爱简 Regular 子集）位于 `assets/fonts/zql-v2.woff2`，随本仓库分发并经 jsDelivr CDN 提供；字体站标注其商用须授权，复用前请自行确认。后台上传的字体由站点管理员自行提供，保存在 `usr/uploads/fonts`，不属于本仓库；上传前请确认字体授权允许你的站点使用。
+默认字体 ZQL（走路带风小可爱简 Regular 子集）位于 `assets/fonts/zql-v2.woff2`，随本仓库分发并经 jsDelivr CDN 提供；字体站标注其商用须授权，复用前请自行确认。可选字体 HarmonyOS Sans SC Medium 位于 `assets/fonts/harmonyos-sans-sc-medium.woff`，同样随仓库分发，受 HarmonyOS Fonts License Agreement 约束。后台上传的字体由站点管理员自行提供，保存在 `usr/uploads/fonts`，不属于本仓库；上传前请确认字体授权允许你的站点使用。
 
 原主题 **Ying** 的归属以上游仓库为准：[heysiu/Ying](https://github.com/heysiu/Ying)。该仓库所有者为 [heysiu](https://github.com/heysiu)（GitHub 资料名 Siu）。原仓库未声明许可证。本项目保留上游仓库信息，原始主题的设计与素材版权归其原作者及贡献者所有；如需将原主题部分用于闭源或商业再分发，请先取得上游作者的明确授权。
 
@@ -120,7 +120,7 @@ git clone https://github.com/yiktt/YingK.git YingK
 
 - 原主题：[heysiu/Ying](https://github.com/heysiu/Ying)
 - 默认字体：ZQL「走路带风小可爱简」Regular 子集（`assets/fonts/zql-v2.woff2`，经 jsDelivr CDN 提供）
-- 字体：HarmonyOS Sans SC Medium（可选鸿蒙 CDN 来源；Copyright Huawei Device Co., Ltd.，HarmonyOS Fonts License Agreement）
+- 字体：HarmonyOS Sans SC Medium（`assets/fonts/harmonyos-sans-sc-medium.woff`，经 jsDelivr CDN 提供；Copyright Huawei Device Co., Ltd.，HarmonyOS Fonts License Agreement）
 - 图标：[Remix Icon](https://remixicon.com/)（Remix Icon License 1.0）
 - 代码高亮：[highlight.js](https://highlightjs.org/) v11.11.1（BSD-3-Clause）
 - 博客程序：[Typecho](https://typecho.org/)

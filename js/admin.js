@@ -263,7 +263,7 @@
                 return '当前使用：ZQL CDN（jsDelivr）';
             }
             if (source === 'harmony') {
-                return '当前使用：HarmonyOS CDN';
+                return '当前使用：鸿蒙 CDN（jsDelivr）';
             }
             if (source === 'custom') {
                 var raw = urlInput ? urlInput.value.trim() : String(config.customUrl || '');
