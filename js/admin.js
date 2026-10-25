@@ -229,7 +229,7 @@
                     return sourceInputs[i].value;
                 }
             }
-            return config.source || 'local';
+            return config.source || 'cdn';
         }
 
         function currentLocal() {
@@ -258,6 +258,9 @@
         function statusFor(source) {
             if (source === 'none') {
                 return '当前使用：系统字体（不加载字体文件）';
+            }
+            if (source === 'cdn') {
+                return '当前使用：ZQL CDN（jsDelivr）';
             }
             if (source === 'harmony') {
                 return '当前使用：HarmonyOS CDN';

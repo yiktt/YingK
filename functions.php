@@ -219,7 +219,7 @@ function yingFontSource($options = null): string
 {
     $options = $options ?: \Widget\Options::alloc();
     $source = trim((string)$options->fontSource);
-    if (in_array($source, ['local', 'none', 'harmony', 'custom'], true)) {
+    if (in_array($source, ['cdn', 'local', 'none', 'harmony', 'custom'], true)) {
         return $source;
     }
 
@@ -242,11 +242,22 @@ function yingHarmonyFontUrls(): array
     ];
 }
 
+function yingCdnFontUrls(): array
+{
+    return [
+        'https://cdn.jsdelivr.net/gh/yiktt/YingK@main/assets/fonts/zql-v2.woff2',
+        'https://fastly.jsdelivr.net/gh/yiktt/YingK@main/assets/fonts/zql-v2.woff2',
+    ];
+}
+
 function yingFontUrls($options = null): array
 {
     $options = $options ?: \Widget\Options::alloc();
     $source = yingFontSource($options);
 
+    if ($source === 'cdn') {
+        return yingCdnFontUrls();
+    }
     if ($source === 'harmony') {
         return yingHarmonyFontUrls();
     }
@@ -273,7 +284,8 @@ function yingFontStack(bool $hasWebFont): string
 function yingFontSourceOptions(): array
 {
     return [
-        'local' => [_t('本地字体'), _t('默认')],
+        'cdn' => [_t('ZQL CDN'), _t('默认')],
+        'local' => [_t('本地字体'), _t('上传')],
         'none' => [_t('系统字体'), _t('不加载文件')],
         'harmony' => [_t('鸿蒙 CDN'), _t('备用')],
         'custom' => [_t('自定义链接'), _t('URL')],
@@ -284,6 +296,9 @@ function yingFontStatusText(string $source, array $library, string $selected, st
 {
     if ($source === 'none') {
         return _t('当前使用：系统字体（不加载字体文件）');
+    }
+    if ($source === 'cdn') {
+        return _t('当前使用：ZQL CDN（jsDelivr）');
     }
     if ($source === 'harmony') {
         return _t('当前使用：HarmonyOS CDN');
@@ -897,7 +912,7 @@ function themeConfig($form)
     $fontSource = new \Typecho\Widget\Helper\Form\Element\Radio(
         'fontSource',
         $sourceOptionLabels,
-        'local',
+        'cdn',
         _t('字体来源')
     );
     $fontSource->value($currentSource);
@@ -1151,7 +1166,7 @@ function themeConfigHandle(array $settings, bool $isInit): bool
     $settings['fontUrl'] = trim((string)($settings['fontUrl'] ?? ''));
 
     if ($isInit) {
-        $settings['fontSource'] = 'local';
+        $settings['fontSource'] = 'cdn';
         $settings['fontLocal'] = '';
         $settings['fontLibrary'] = '[]';
         $settings['fontUrl'] = '';
