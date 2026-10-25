@@ -34,7 +34,7 @@
     </div>
     <div class="back-float">
         <?php if ($this->is('post')): ?>
-        <a href="<?php $this->options->siteUrl(); ?>" id="back-btn" class="float-btn" title="返回列表" aria-label="返回列表"><i class="ri-arrow-left-line"></i></a>
+        <a href="<?php $this->options->siteUrl(); ?>" id="back-btn" class="float-btn" aria-label="返回列表"><i class="ri-arrow-left-line"></i></a>
         <?php endif; ?>
     </div>
     <script src="<?php $this->options->themeUrl('js/app.js'); ?>"></script>

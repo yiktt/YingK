@@ -27,8 +27,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Third-party assets bundled with this theme:
+Third-party assets and services:
 - HarmonyOS Sans SC Medium: Copyright Huawei Device Co., Ltd., subject to the
-  HarmonyOS Fonts License Agreement.
+  HarmonyOS Fonts License Agreement. Not bundled by default; loaded from the
+  upstream repository via jsDelivr, or from a URL configured in the theme.
+- Fonts uploaded through the theme settings are provided by the site
+  administrator and stored in usr/uploads/fonts; they are not part of this
+  repository. The administrator is responsible for their licenses.
 - Remix Icon: Remix Icon License 1.0 (https://remixicon.com/).
 - highlight.js v11.11.1: BSD-3-Clause (https://highlightjs.org/).

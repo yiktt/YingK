@@ -1,15 +1,12 @@
 <?php if (!defined('__TYPECHO_ROOT_DIR__')) exit;
 $bgUrl = $this->options->bgUrl ? $this->options->bgUrl : $this->options->themeUrl . '/img/bg-default.jpg';
-$bgCss = strtr($bgUrl, [
-    '\\' => '\\\\',
-    "'"  => "\\'",
-    '"'  => '\\"',
-    '<'  => '\\3c ',
-    '>'  => '\\3e ',
-    "\n" => '\\a ',
-    "\r" => '\\d ',
-    "\f" => '\\c ',
-]);
+$bgCss = yingCssUrl($bgUrl);
+$fontUrls = yingFontUrls($this->options);
+$hasWebFont = !empty($fontUrls);
+$fontSrc = implode(', ', array_map(function ($url) {
+    return "url('" . yingCssUrl($url) . "')";
+}, $fontUrls));
+$readingFont = yingFontStack($hasWebFont);
 $logoUrl = trim((string)$this->options->logoUrl);
 if ($logoUrl === '') {
     $logoUrl = $this->options->themeUrl . '/avatar.png';
@@ -74,7 +71,13 @@ foreach ($contactsList as $c) {
     } else {
         $url = preg_match('/^(https?:|mailto:)/i', $curl) ? $curl : 'https://' . ltrim($curl, '/');
     }
-    $contacts[] = ['label' => $contactTypes[$ctype][0], 'icon' => $contactTypes[$ctype][1], 'url' => $url];
+    $cicon = $ctype === 'link' && isset($c['icon']) && is_string($c['icon']) ? trim($c['icon']) : '';
+    $contacts[] = [
+        'label' => $contactTypes[$ctype][0],
+        'icon' => $contactTypes[$ctype][1],
+        'iconUrl' => $cicon !== '' && yingUrlIsSafe($cicon) ? $cicon : '',
+        'url' => $url,
+    ];
 }
 
 // 一言 API 模式参数
@@ -108,7 +111,18 @@ $yiyanCats = implode(',', (array)$this->options->yiyanCats);
     <link rel="stylesheet" href="<?php $this->options->themeUrl('css/normalize.min.css'); ?>">
     <link rel="stylesheet" href="<?php $this->options->themeUrl('css/main.css'); ?>">
     <link rel="stylesheet" href="<?php $this->options->themeUrl('css/remixicon.min.css'); ?>">
-    <style>:root { --page-bg: url('<?php echo $bgCss; ?>'); --card-alpha: <?php echo $cardAlpha; ?>; }</style>
+    <style>
+    <?php if ($hasWebFont): ?>
+    @font-face {
+        font-family: 'YingK Sans';
+        src: <?php echo $fontSrc; ?>;
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+    }
+    <?php endif; ?>
+    :root { --reading-font: <?php echo $readingFont; ?>; --page-bg: url('<?php echo $bgCss; ?>'); --card-alpha: <?php echo $cardAlpha; ?>; }
+    </style>
     <?php $this->header('generator=&wlw='); ?>
 </head>
 <body<?php if ($this->is('post')): ?> class="is-post"<?php endif; ?>>
@@ -121,7 +135,7 @@ $yiyanCats = implode(',', (array)$this->options->yiyanCats);
                     <nav class="nav contacts" aria-label="联系方式">
                         <ul class="flat">
                             <?php foreach ($contacts as $contact): ?>
-                            <li><a href="<?php echo htmlspecialchars($contact['url'], ENT_QUOTES); ?>"<?php if (stripos($contact['url'], 'http') === 0): ?> target="_blank" rel="noopener"<?php endif; ?> title="<?php echo htmlspecialchars($contact['label'], ENT_QUOTES); ?>" aria-label="<?php echo htmlspecialchars($contact['label'], ENT_QUOTES); ?>"><i class="<?php echo $contact['icon']; ?>"></i></a></li>
+                            <li><a href="<?php echo htmlspecialchars($contact['url'], ENT_QUOTES); ?>"<?php if (stripos($contact['url'], 'http') === 0): ?> target="_blank" rel="noopener"<?php endif; ?> title="<?php echo htmlspecialchars($contact['label'], ENT_QUOTES); ?>" aria-label="<?php echo htmlspecialchars($contact['label'], ENT_QUOTES); ?>"><?php if (!empty($contact['iconUrl'])): ?><img class="contact-icon" src="<?php echo htmlspecialchars($contact['iconUrl'], ENT_QUOTES, 'UTF-8'); ?>" alt="" width="19" height="19" referrerpolicy="no-referrer"><?php else: ?><i class="<?php echo $contact['icon']; ?>"></i><?php endif; ?></a></li>
                             <?php endforeach; ?>
                         </ul>
                     </nav>

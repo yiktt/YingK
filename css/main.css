@@ -1,12 +1,4 @@
-/* 正文/一言字体：HarmonyOS Sans SC Medium（主题内置，font-display: swap） */
-
-@font-face {
-    font-family: 'HarmonyOS Sans SC Medium';
-    src: url('../font/HarmonyOS_Sans/HarmonyOS_Sans_SC_Medium.woff') format('woff');
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
-}
+/* 正文/一言字体：默认 HarmonyOS Sans SC Medium，可在后台替换（@font-face 由 header.php 注入） */
 
 /* ========== 主题色板：白天 / 夜间 ========== */
 
@@ -146,7 +138,7 @@ html {
 }
 
 body {
-    font-family: 'HarmonyOS Sans SC Medium', serif;
+    font-family: var(--reading-font, 'YingK Sans', 'HarmonyOS Sans SC Medium', 'HarmonyOS Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
     color: var(--text);
     line-height: 1.6;
     font-size: 16px;
@@ -800,6 +792,12 @@ ul {
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 }
 
+/* 覆盖全局 a:hover 下划线：返回按钮等图标链接悬停不出现下划线 */
+a.float-btn,
+a.float-btn:hover {
+    text-decoration: none;
+}
+
 .float-btn:active {
     transform: scale(0.94);
 }
@@ -843,6 +841,12 @@ ul {
 .top-menu-btn:hover {
     background: var(--float-bg-hover);
     color: var(--top-btn-icon-hover);
+}
+
+/* 覆盖全局 a:hover 下划线：RSS 图标链接悬停不出现下划线 */
+a.top-menu-btn,
+a.top-menu-btn:hover {
+    text-decoration: none;
 }
 
 .menu-handle i {
@@ -953,6 +957,14 @@ ul {
     color: var(--link-hover);
     text-decoration: none;
     transform: translateY(-1px);
+}
+
+.nav.contacts .contact-icon {
+    display: block;
+    flex: none;
+    width: 19px;
+    height: 19px;
+    object-fit: contain;
 }
 
 /* 悬浮按钮组：移动端适配（须置于桌面规则之后） */
@@ -1313,7 +1325,7 @@ darkb-text:active {
     }
 }
 
-/* 一言：与正文同族（HarmonyOS Sans SC），以字号与墨色区分层次 */
+/* 一言：与正文同族（可在后台替换），以字号与墨色区分层次 */
 .site-description h2 {
     font-weight: normal;
     font-size: 1.08rem;

@@ -1,0 +1,970 @@
+/*
+ * YingK appearance settings
+ * A proof-sheet for the reading theme: ink masthead, paper fields,
+ * and a live type drawer. Scoped to the theme settings form.
+ */
+
+.ying-settings,
+.ying-settings-col {
+    --ying-paper: #eef0e9;
+    --ying-surface: #fbfcf8;
+    --ying-ink: #151a18;
+    --ying-muted: #5c665f;
+    --ying-line: #c9cec5;
+    --ying-cobalt: #2647d8;
+    --ying-cobalt-soft: #e4e8fb;
+    --ying-danger: #a63a2a;
+    --ying-wash: #e5e8df;
+    --ying-ui: "Avenir Next", "Segoe UI", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+    --ying-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, "Liberation Mono", monospace;
+}
+
+.ying-settings-col {
+    float: none !important;
+    width: 100% !important;
+    max-width: 1180px;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding: 24px 32px 40px !important;
+    background: var(--ying-paper);
+    border: 1px solid rgba(21, 26, 24, .06);
+    border-radius: 24px;
+    box-shadow: 0 1px 0 rgba(21, 26, 24, .04), 0 32px 80px -60px rgba(21, 26, 24, .6);
+    box-sizing: border-box;
+}
+
+.ying-settings-page {
+    padding-bottom: 48px;
+}
+
+.ying-settings {
+    padding-bottom: 8px;
+    color: var(--ying-ink);
+    font-family: var(--ying-ui);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.ying-settings *,
+.ying-settings *::before,
+.ying-settings *::after {
+    box-sizing: border-box;
+}
+
+.ying-settings .typecho-option {
+    margin: 0;
+    padding: 18px 20px;
+    list-style: none;
+    background: var(--ying-surface);
+    border: 1px solid var(--ying-line);
+    border-radius: 16px;
+}
+
+.ying-settings .typecho-option > li {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ying-settings .typecho-option span {
+    margin-right: 0;
+}
+
+.ying-settings .typecho-option > li > label.typecho-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+    padding: 0;
+    color: var(--ying-ink);
+    font-family: var(--ying-ui);
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 1.4;
+}
+
+.ying-settings .ying-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--ying-wash);
+    color: var(--ying-muted);
+    font-family: var(--ying-mono);
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: .04em;
+}
+
+.ying-settings .typecho-option .description {
+    margin: 10px 0 0;
+    color: var(--ying-muted);
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+.ying-settings .typecho-option p.description:empty {
+    display: none;
+}
+
+.ying-settings input[type="text"],
+.ying-settings input[type="url"],
+.ying-settings input[type="email"],
+.ying-settings input[type="number"],
+.ying-settings input[type="password"],
+.ying-settings textarea,
+.ying-settings select {
+    width: 100% !important;
+    min-height: 44px;
+    margin: 0;
+    padding: 9px 12px !important;
+    border: 1px solid var(--ying-line) !important;
+    border-radius: 10px !important;
+    background: #fff !important;
+    color: var(--ying-ink) !important;
+    font-family: var(--ying-ui) !important;
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+    box-shadow: none !important;
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.ying-settings textarea {
+    min-height: 96px;
+    resize: vertical;
+}
+
+.ying-settings input[type="text"]:focus,
+.ying-settings input[type="url"]:focus,
+.ying-settings input[type="email"]:focus,
+.ying-settings input[type="number"]:focus,
+.ying-settings input[type="password"]:focus,
+.ying-settings textarea:focus,
+.ying-settings select:focus {
+    border-color: var(--ying-cobalt) !important;
+    box-shadow: 0 0 0 3px var(--ying-cobalt-soft) !important;
+    outline: none !important;
+}
+
+.ying-settings input::placeholder,
+.ying-settings textarea::placeholder {
+    color: #98a29a;
+}
+
+.ying-settings input[name="cardAlpha"] {
+    max-width: 120px;
+}
+
+/* Radio / checkbox pills */
+.ying-settings .typecho-option span.multiline {
+    position: relative;
+    display: inline-flex;
+    align-items: stretch;
+    margin: 0 6px 6px 0;
+    vertical-align: top;
+}
+
+.ying-settings .typecho-option span.multiline > input[type="radio"],
+.ying-settings .typecho-option span.multiline > input[type="checkbox"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.ying-settings .typecho-option span.multiline > label {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2px 8px;
+    min-height: 44px;
+    padding: 8px 14px;
+    border: 1px solid var(--ying-line);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--ying-ink);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.35;
+    cursor: pointer;
+    transition: background .18s ease, color .18s ease, border-color .18s ease;
+}
+
+.ying-settings .typecho-option span.multiline > label:hover {
+    border-color: #aeb6ad;
+}
+
+.ying-settings .typecho-option span.multiline > label small {
+    flex-basis: 100%;
+    color: inherit;
+    font-family: var(--ying-mono);
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: .04em;
+    opacity: .55;
+}
+
+.ying-settings .typecho-option span.multiline > input:checked + label {
+    background: var(--ying-ink);
+    border-color: var(--ying-ink);
+    color: var(--ying-paper);
+}
+
+.ying-settings .typecho-option span.multiline > input:focus-visible + label {
+    outline: 2px solid var(--ying-cobalt);
+    outline-offset: 2px;
+}
+
+/* Font source */
+.ying-settings .ying-source-field {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.ying-settings .ying-source-field > label.typecho-label,
+.ying-settings .ying-source-field > p.description {
+    grid-column: 1 / -1;
+    width: auto;
+}
+
+.ying-settings .ying-source-field span.multiline {
+    margin: 0;
+}
+
+.ying-settings .ying-source-field span.multiline > label {
+    width: 100%;
+    min-height: 64px;
+    flex-flow: column nowrap;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.ying-settings .ying-source-field span.multiline > label small {
+    flex-basis: auto;
+    width: auto;
+    margin-top: 2px;
+}
+
+.ying-settings .ying-source-field span.multiline > label:hover {
+    border-color: var(--ying-cobalt);
+}
+
+.ying-settings .ying-source-field span.multiline > input:checked + label {
+    background: var(--ying-ink);
+    border-color: var(--ying-ink);
+    color: var(--ying-paper);
+}
+
+.ying-settings .ying-source-field .ying-opt-label {
+    font-size: 13px;
+    font-weight: 650;
+}
+
+.ying-settings .ying-source-field small {
+    margin-top: 1px;
+}
+
+.ying-settings .ying-font-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 3px;
+    color: var(--ying-ink);
+    font-family: var(--ying-mono);
+    font-size: 10px;
+    line-height: 1.5;
+    letter-spacing: .01em;
+}
+
+.ying-settings .ying-font-status::before {
+    content: "";
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ying-cobalt);
+    box-shadow: 0 0 0 3px var(--ying-cobalt-soft);
+}
+
+/* Font library */
+.ying-settings .ying-library {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 300px;
+    margin-top: 12px;
+    padding-right: 4px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+}
+
+.ying-settings .ying-font-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--ying-line);
+    border-radius: 10px;
+    background: #fff;
+    transition: border-color .18s ease, background .18s ease, opacity .18s ease;
+}
+
+.ying-settings .ying-font-card:hover {
+    border-color: #aeb6ad;
+    background: #fafbf7;
+}
+
+.ying-settings .ying-font-card.is-active {
+    border-color: var(--ying-cobalt);
+    background: #f7f8ff;
+    box-shadow: inset 3px 0 0 var(--ying-cobalt);
+}
+
+.ying-settings .ying-font-card.is-pending-delete {
+    border-style: dashed;
+    border-color: var(--ying-danger);
+    opacity: .6;
+}
+
+.ying-settings .ying-font-card > input[type="radio"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+
+.ying-settings .ying-font-card-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
+.ying-settings .ying-font-glyph {
+    flex: none;
+    width: 58px;
+    overflow: hidden;
+    color: var(--ying-ink);
+    font-family: var(--ying-ui);
+    font-size: 22px;
+    line-height: 1.2;
+    letter-spacing: -.03em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ying-settings .ying-font-card.is-active .ying-font-glyph {
+    font-family: var(--ying-preview, var(--ying-ui));
+}
+
+.ying-settings .ying-font-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.ying-settings .ying-font-name {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    color: var(--ying-ink);
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.ying-settings .ying-font-meta {
+    display: block;
+    color: var(--ying-muted);
+    font-family: var(--ying-mono);
+    font-size: 9px;
+    line-height: 1.4;
+    letter-spacing: .01em;
+    overflow-wrap: anywhere;
+}
+
+.ying-settings .ying-font-stamp,
+.ying-settings .ying-font-pending-stamp {
+    display: inline-flex;
+    align-items: center;
+    min-height: 16px;
+    padding: 0 5px;
+    border-radius: 999px;
+    white-space: nowrap;
+    font-family: var(--ying-mono);
+    font-size: 8px;
+    font-weight: 500;
+    letter-spacing: .06em;
+}
+
+.ying-settings .ying-font-stamp {
+    background: var(--ying-cobalt-soft);
+    color: var(--ying-cobalt);
+}
+
+.ying-settings .ying-font-pending-stamp {
+    background: #f7e3df;
+    color: var(--ying-danger);
+}
+
+.ying-settings .ying-font-remove {
+    position: static;
+    z-index: auto;
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    min-height: 28px;
+    margin-left: auto;
+    padding: 0 8px;
+    border: 1px solid var(--ying-line);
+    border-radius: 999px;
+    background: var(--ying-surface);
+    color: var(--ying-muted);
+    font-size: 10px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background .18s ease, border-color .18s ease, color .18s ease;
+}
+
+.ying-settings .ying-font-remove input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+
+.ying-settings .ying-font-remove:hover {
+    border-color: var(--ying-danger);
+    color: var(--ying-danger);
+}
+
+.ying-settings .ying-font-remove.is-checked,
+.ying-settings .ying-font-remove:has(input:checked) {
+    background: var(--ying-danger);
+    border-color: var(--ying-danger);
+    color: #fff;
+}
+
+.ying-settings .ying-font-card:focus-within {
+    outline: 2px solid var(--ying-cobalt);
+    outline-offset: 1px;
+}
+
+.ying-settings .ying-font-library-note {
+    display: block;
+    margin-top: 8px;
+    color: var(--ying-muted);
+    font-size: 10.5px;
+    line-height: 1.6;
+}
+
+.ying-settings .ying-font-empty {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+    padding: 14px 16px;
+    border: 1px dashed var(--ying-line);
+    border-radius: 10px;
+    background: var(--ying-wash);
+    text-align: left;
+}
+
+.ying-settings .ying-font-empty-glyph {
+    flex: none;
+    color: #b2bab1;
+    font-family: var(--ying-ui);
+    font-size: 28px;
+    line-height: 1;
+    letter-spacing: -.04em;
+}
+
+.ying-settings .ying-font-empty-text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.ying-settings .ying-font-empty-title {
+    color: var(--ying-ink);
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.ying-settings .ying-font-empty-note {
+    color: var(--ying-muted);
+    font-size: 11px;
+}
+
+/* Upload */
+.ying-settings .ying-upload-wrap {
+    margin-top: 0;
+}
+
+.ying-settings .ying-drop {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px 10px;
+    min-height: 76px;
+    padding: 14px 16px;
+    border: 1px dashed #aeb6ad;
+    border-radius: 10px;
+    background: var(--ying-wash);
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .18s ease, background .18s ease;
+}
+
+.ying-settings .ying-drop:hover,
+.ying-settings .ying-drop.is-dragover {
+    border-color: var(--ying-cobalt);
+    background: var(--ying-cobalt-soft);
+}
+
+.ying-settings .ying-drop.is-error {
+    border-color: var(--ying-danger);
+    background: #fbeeeb;
+}
+
+.ying-settings .ying-drop:focus-within {
+    outline: 2px solid var(--ying-cobalt);
+    outline-offset: 2px;
+}
+
+.ying-settings .ying-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+}
+
+.ying-settings .ying-drop-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--ying-line);
+    border-radius: 50%;
+    background: var(--ying-surface);
+    color: var(--ying-ink);
+    font-family: var(--ying-mono);
+    font-size: 14px;
+    line-height: 1;
+}
+
+.ying-settings .ying-drop-title {
+    color: var(--ying-ink);
+    font-size: 12.5px;
+    font-weight: 650;
+}
+
+.ying-settings .ying-drop-note {
+    color: var(--ying-muted);
+    font-family: var(--ying-mono);
+    font-size: 9px;
+    line-height: 1.5;
+    letter-spacing: .02em;
+}
+
+.ying-settings .ying-drop-file {
+    display: inline-flex;
+    max-width: 100%;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--ying-surface);
+    color: var(--ying-muted);
+    font-size: 10px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.ying-settings .ying-drop.has-file .ying-drop-file {
+    background: var(--ying-cobalt-soft);
+    color: var(--ying-cobalt);
+}
+
+.ying-settings .ying-drop.is-error .ying-drop-file {
+    color: var(--ying-danger);
+}
+
+.ying-settings .ying-upload-note {
+    margin: 8px 0 0;
+    color: var(--ying-muted);
+    font-size: 10.5px;
+    line-height: 1.6;
+}
+
+.ying-settings .ying-flash-error {
+    display: block;
+    margin-top: 8px;
+    color: var(--ying-danger);
+    font-size: 11.5px;
+    line-height: 1.6;
+}
+
+/* Sections and field grid */
+.ying-settings .ying-section {
+    margin-top: 32px;
+}
+
+.ying-settings .ying-section:first-of-type {
+    margin-top: 0;
+}
+
+.ying-settings .ying-section-head {
+    display: block;
+    margin-bottom: 12px;
+    padding: 0 2px;
+}
+
+.ying-settings .ying-section-heading {
+    min-width: 0;
+}
+
+.ying-settings .ying-section-eyebrow {
+    margin: 0 0 4px;
+    color: var(--ying-cobalt);
+    font-family: var(--ying-mono);
+    font-size: 9px;
+    letter-spacing: .18em;
+    line-height: 1.5;
+}
+
+.ying-settings .ying-section-title {
+    margin: 0;
+    color: var(--ying-ink);
+    font-family: var(--ying-ui);
+    font-size: 20px;
+    font-weight: 650;
+    line-height: 1.2;
+    letter-spacing: -.025em;
+}
+
+.ying-settings .ying-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    align-items: stretch;
+}
+
+.ying-settings .ying-fields > .typecho-option {
+    min-width: 0;
+}
+
+.ying-settings .ying-fields > .ying-field-wide {
+    grid-column: 1 / -1;
+}
+
+.ying-settings .ying-section-font .ying-fields {
+    grid-template-columns: 1fr;
+    align-items: start;
+}
+
+.ying-settings .ying-section-font [data-ying-field] {
+    grid-column: auto;
+}
+
+.ying-settings .ying-field-inline {
+    grid-column: 1 / -1;
+}
+
+.ying-settings .ying-field-inline > li {
+    display: block;
+}
+
+.ying-settings .ying-inline-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.ying-settings .ying-inline-head > label.typecho-label {
+    margin: 0;
+}
+
+.ying-settings .ying-inline-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.ying-settings .ying-inline-options span.multiline {
+    margin: 0;
+}
+
+.ying-settings .ying-field-inline p.description {
+    margin-top: 8px;
+}
+
+/* Save bar */
+
+.ying-settings .ying-savebar {
+    position: relative;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 32px 0 0;
+    padding: 12px 16px;
+    border: 1px solid var(--ying-line);
+    border-radius: 16px;
+    background: rgba(251, 252, 248, .94);
+    box-shadow: 0 16px 40px -30px rgba(21, 26, 24, .65);
+    backdrop-filter: blur(12px);
+}
+
+.ying-settings .ying-savebar.is-dirty {
+    position: sticky;
+    bottom: 12px;
+}
+
+.ying-settings .ying-savebar > li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ying-settings .ying-save-note {
+    color: var(--ying-muted);
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+
+.ying-settings .ying-savebar.is-dirty .ying-save-note::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 7px;
+    border-radius: 50%;
+    background: var(--ying-cobalt);
+    vertical-align: 1px;
+}
+
+.ying-settings .ying-savebar .btn {
+    flex: none;
+    min-height: 44px;
+    padding: 0 22px !important;
+    border: 0 !important;
+    border-radius: 12px !important;
+    background: var(--ying-cobalt) !important;
+    color: #fff !important;
+    font-family: var(--ying-ui);
+    font-size: 13px;
+    font-weight: 650;
+    box-shadow: none;
+    cursor: pointer;
+}
+
+.ying-settings .ying-savebar .btn:hover {
+    background: #1f3bb7 !important;
+}
+
+.ying-settings .ying-savebar .btn:focus-visible {
+    outline: 2px solid var(--ying-ink);
+    outline-offset: 2px;
+}
+
+/* Buttons inside editors */
+.ying-settings .btn {
+    border-radius: 10px;
+    font-family: var(--ying-ui);
+}
+
+.ying-settings #friend-add-btn,
+.ying-settings #contact-add-btn {
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px dashed var(--ying-line);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--ying-ink);
+    font-size: 12px;
+    box-shadow: none;
+}
+
+.ying-settings #friend-add-btn:hover,
+.ying-settings #contact-add-btn:hover {
+    border-color: var(--ying-cobalt);
+    color: var(--ying-cobalt);
+    background: transparent;
+}
+
+/* Existing contact / friend editors keep their behaviour, not their old skin */
+.ying-settings #friends-editor .friend-block,
+.ying-settings #contacts-editor .contact-block {
+    border: 1px solid var(--ying-line) !important;
+    border-radius: 12px !important;
+    padding: 12px 14px !important;
+    margin: 10px 0 12px !important;
+    background: var(--ying-wash) !important;
+}
+
+.ying-settings #friends-editor .friend-block-head strong {
+    color: var(--ying-ink) !important;
+    font-family: var(--ying-mono) !important;
+    font-size: 10px !important;
+    font-weight: 500 !important;
+    letter-spacing: .08em !important;
+}
+
+.ying-settings #friends-editor .friend-del,
+.ying-settings #contacts-editor .contact-del {
+    min-height: 32px !important;
+    padding: 0 12px !important;
+    border-radius: 999px !important;
+    background: #f7e3df !important;
+    color: var(--ying-danger) !important;
+    font-size: 11px !important;
+}
+
+.ying-settings #friends-editor .friend-del:hover,
+.ying-settings #contacts-editor .contact-del:hover {
+    background: #f2d2cc !important;
+}
+
+.ying-settings #friends-editor .friend-avatar-preview {
+    background: var(--ying-line) !important;
+    color: var(--ying-muted) !important;
+}
+
+.ying-settings #contacts-editor .contact-block .ct-title {
+    color: var(--ying-muted) !important;
+    font-family: var(--ying-mono) !important;
+    font-size: 10px !important;
+}
+
+.ying-settings #friends-editor .friend-row > label {
+    color: var(--ying-muted) !important;
+    font-size: 11px !important;
+}
+
+/* Validation / notices inside fields */
+.ying-settings .message {
+    margin: 8px 0 0;
+    font-size: 11.5px;
+    line-height: 1.6;
+}
+
+.ying-settings .message.error {
+    color: var(--ying-danger);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .ying-settings .ying-source-field {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767px) {
+    .ying-settings-col {
+        padding: 16px 14px 28px !important;
+        border-radius: 16px;
+    }
+
+    .ying-settings-page {
+        padding-bottom: 16px;
+    }
+
+    .ying-settings .ying-section {
+        margin-top: 24px;
+    }
+
+    .ying-settings .ying-section-title {
+        font-size: 18px;
+    }
+
+    .ying-settings .ying-fields {
+        grid-template-columns: 1fr;
+    }
+
+    .ying-settings .ying-fields > .ying-field-wide,
+    .ying-settings .ying-field-inline {
+        grid-column: auto;
+    }
+
+    .ying-settings .typecho-option {
+        padding: 14px 13px;
+        border-radius: 12px;
+    }
+
+    .ying-settings .ying-font-remove {
+        min-width: 44px;
+        min-height: 44px;
+        font-size: 11px;
+    }
+
+    .ying-settings .ying-inline-head {
+        align-items: flex-start;
+    }
+
+    .ying-settings .ying-inline-options {
+        width: 100%;
+    }
+
+    .ying-settings .ying-savebar {
+        padding: 10px 12px;
+        border-radius: 14px;
+    }
+
+    .ying-settings .ying-savebar.is-dirty {
+        bottom: 8px;
+    }
+
+    .ying-settings .ying-savebar > li {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .ying-settings .ying-save-note {
+        width: 100%;
+    }
+
+    .ying-settings .ying-savebar .btn {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ying-settings *,
+    .ying-settings *::before,
+    .ying-settings *::after {
+        animation: none !important;
+        transition: none !important;
+    }
+}
