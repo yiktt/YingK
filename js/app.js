@@ -1,6 +1,13 @@
 // 须在顶层捕获：DOMContentLoaded 回调执行时 document.currentScript 已为 null
 var YING_THEME_URL = (document.currentScript && document.currentScript.src || '').replace(/\/js\/[^/]+$/, '');
 
+// AJAX 换页期间 history.back() 会先触发浏览器原生滚动恢复：视口在内容交换前
+// 瞬间跳到目标页保存的滚动位置（仍在旧页面内容上），随后内容再硬切，形成"闪一下"。
+// 改为手动恢复：由 navigate() 在交换后同帧滚动到记录位置，视觉上只有一次原子切换。
+if ('scrollRestoration' in history) {
+    history.scrollRestoration = 'manual';
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     var root = document.documentElement;
 
