@@ -4,7 +4,6 @@
  *
  * @package YingK
  * @author yiktt
- * @version 3.2
  * @link https://github.com/yiktt/YingK
  */
 

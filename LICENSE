@@ -2,11 +2,13 @@ MIT License
 
 Copyright (c) 2026 YingK contributors
 
-Original theme "Ying (颖)" by 颖宝 (https://github.com/heysiu/Ying/).
-The original repository did not declare a license. The MIT grant below
-applies to the modifications and additions made in this repository; the
-original theme, its design and its assets remain attributed to their
-original author.
+Original theme "Ying (颖)": the upstream code header declares @author 颖宝
+(https://github.com/heysiu/Ying/blob/main/index.php); the upstream
+repository heysiu/Ying is owned by Siu (heysiu), and its README credits
+油佬 (https://github.com/heysiu/Ying/blob/main/README.md). The original
+repository did not declare a license. The MIT grant below applies to the
+modifications and additions made in this repository; the original theme,
+its design and its assets remain attributed to their original author(s).
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

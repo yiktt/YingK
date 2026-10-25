@@ -101,7 +101,7 @@ YingK 基于 [heysiu/Ying](https://github.com/heysiu/Ying) 二次开发，重做
 - 计数保存在文章的 `views` 自定义字段，后台文章编辑页可以看到该字段。
 - 同一浏览器对同一篇文章 **24 小时内只计一次**，使用 `ying_view_<cid>` Cookie 去重；不记录 IP，也不会在 `typecho_fields` 中写入每日去重标记。
 - 清除 Cookie、换浏览器或使用无痕窗口会重新计数；爬虫与刷量不会被过滤，因此它表示“浏览热度”，不是独立访客数。
-- 从 3.1 升级后，首次打开「设置外观」会清理旧版 `view_<md5>` 标记，不再污染后台自定义字段列表。
+- 从旧版升级后，首次打开「设置外观」会清理旧版 `view_<md5>` 标记，不再污染后台自定义字段列表。
 
 ## AJAX 与渐进增强
 
@@ -147,9 +147,7 @@ YingK 基于 [heysiu/Ying](https://github.com/heysiu/Ying) 二次开发，重做
 **可以关闭 AJAX 吗？**
 当前没有全局开关；给站内链接加 `data-no-ajax` 即可按链接关闭局部加载。
 
-## 更新记录
-
-### 3.2（2026-10）
+## 最近修正
 
 - 修复移动端返回按钮遮挡头像、右上工具坞覆盖联系方式的问题；联系方式在窄屏换行显示。
 - 修复正文链接不可识别、无序列表丢失项目符号与缩进；恢复正文列表层级。
@@ -162,25 +160,21 @@ YingK 基于 [heysiu/Ying](https://github.com/heysiu/Ying) 二次开发，重做
 - 修正背景图 URL 的 CSS 转义、默认一言错字、标签列表标记、normalize 加载顺序；默认头像使用内置图片。
 - RemixIcon 仅保留 woff2，移除冗余字体；重写 README 与主题截图。
 
-### 3.1 及更早
-
-- Typecho 1.2+/1.3 命名空间适配、夜间模式、AJAX、动态友链与联系方式、代码高亮、归档/友链/404 页面。
-
 ## 开发与验证
 
 - 无构建步骤：直接修改 PHP、`css/main.css`、`js/app.js` 即可。
-- 本次发布在 **Typecho 1.3.0 + PHP 8.3.36 + SQLite** 上完成：PHP 语法检查、设置页保存/JSON 校验、旧标记清理、Cookie 去重、默认 cid / slug / 日期 / 分类固定链接、定时文章过滤、AJAX 前进后退与脚本回退、404、搜索与多宽度渲染均有实测。
+- 本次验证在 **Typecho 1.3.0 + PHP 8.3.36 + SQLite** 上完成：PHP 语法检查、设置页保存/JSON 校验、旧标记清理、Cookie 去重、默认 cid / slug / 日期 / 分类固定链接、定时文章过滤、AJAX 前进后退与脚本回退、404、搜索与多宽度渲染均有实测。
 - Typecho 1.2.1 的命名空间 API 与 1.3.0 源码对照通过；1.2.1 未做运行时回归。
 
 ## 许可
 
 本仓库中 YingK 的修改与新增代码以 **MIT** 协议发布，详见 [LICENSE](LICENSE)。
 
-原主题 **Ying（颖）** 由颖宝创作（[heysiu/Ying](https://github.com/heysiu/Ying)），原仓库未声明许可证。本项目保留原作者署名，原始主题的设计与素材权利归原作者所有；如需将原主题部分用于闭源或商业再分发，请先取得原作者明确授权。
+原主题 **Ying（颖）** 的归属以上游仓库为准：[heysiu/Ying](https://github.com/heysiu/Ying)。上游代码在 [index.php](https://github.com/heysiu/Ying/blob/main/index.php#L6) 头部标注 `@author 颖宝`；该仓库所有者为 [heysiu](https://github.com/heysiu)（GitHub 资料名 Siu），上游 [README](https://github.com/heysiu/Ying/blob/main/README.md#L11) 鸣谢油佬。原仓库未声明许可证。本项目保留上述代码署名与上游仓库信息，原始主题的设计与素材版权归其原作者及贡献者所有；如需将原主题部分用于闭源或商业再分发，请先取得上游作者的明确授权。
 
 ## 致谢
 
-- 原主题：[heysiu/Ying](https://github.com/heysiu/Ying) by 颖宝
+- 原主题：[heysiu/Ying](https://github.com/heysiu/Ying)；代码头部署名 `@author 颖宝`，上游 README 鸣谢油佬
 - 图标：[Remix Icon](https://remixicon.com/)（Remix Icon License 1.0）
 - 代码高亮：[highlight.js](https://highlightjs.org/) v11.11.1（BSD-3-Clause）
 - 博客程序：[Typecho](https://typecho.org/)
