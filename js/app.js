@@ -7,14 +7,17 @@ document.addEventListener('DOMContentLoaded', function () {
     // ===== 夜间 / 白天模式切换 =====
     var toggle = document.getElementById('theme-toggle');
 
-    function syncToggleIcon() {
+    function syncToggle() {
         if (!toggle) {
             return;
         }
+        var dark = root.getAttribute('data-theme') === 'dark';
         var icon = toggle.querySelector('i');
         if (icon) {
-            icon.className = root.getAttribute('data-theme') === 'dark' ? 'ri-sun-line' : 'ri-moon-line';
+            icon.className = dark ? 'ri-sun-line' : 'ri-moon-line';
         }
+        toggle.setAttribute('aria-pressed', dark ? 'true' : 'false');
+        toggle.setAttribute('aria-label', dark ? '切换到白天模式' : '切换到夜间模式');
     }
 
     if (toggle) {
@@ -24,9 +27,9 @@ document.addEventListener('DOMContentLoaded', function () {
             try {
                 localStorage.setItem('ying-theme', next);
             } catch (e) {}
-            syncToggleIcon();
+            syncToggle();
         });
-        syncToggleIcon();
+        syncToggle();
     }
 
     // ===== 一言 API：按后台配置获取随机句子（淡入过渡，失败回退固定内容） =====
@@ -92,11 +95,22 @@ document.addEventListener('DOMContentLoaded', function () {
     var searchBtn = document.getElementById('search-btn');
     var searchPanel = document.getElementById('search-panel');
 
+    function closeSearch() {
+        if (!searchPanel) {
+            return;
+        }
+        searchPanel.classList.remove('open');
+        if (searchBtn) {
+            searchBtn.setAttribute('aria-expanded', 'false');
+        }
+    }
+
     if (searchBtn && searchPanel) {
         var searchInput = searchPanel.querySelector('input');
 
         searchBtn.addEventListener('click', function () {
             var opened = searchPanel.classList.toggle('open');
+            searchBtn.setAttribute('aria-expanded', opened ? 'true' : 'false');
             if (opened && searchInput) {
                 searchInput.focus();
             }
@@ -106,13 +120,13 @@ document.addEventListener('DOMContentLoaded', function () {
             if (searchPanel.classList.contains('open')
                 && !searchPanel.contains(e.target)
                 && !searchBtn.contains(e.target)) {
-                searchPanel.classList.remove('open');
+                closeSearch();
             }
         });
 
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
-                searchPanel.classList.remove('open');
+                closeSearch();
             }
         });
     }
@@ -133,6 +147,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     window.addEventListener('scroll', updateScrollButtons, {passive: true});
     window.addEventListener('resize', updateScrollButtons, {passive: true});
+    window.addEventListener('load', updateScrollButtons);
+
+    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     document.addEventListener('click', function (e) {
         var btn = e.target.closest ? e.target.closest('#to_top, #to_bottom') : null;
@@ -142,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function () {
         e.preventDefault();
         window.scrollTo({
             top: btn.id === 'to_top' ? 0 : document.documentElement.scrollHeight,
-            behavior: 'smooth'
+            behavior: reduceMotion ? 'auto' : 'smooth'
         });
     });
 
@@ -178,7 +195,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (history.length > 1) {
             history.back();
         } else {
-            var home = document.querySelector('.header .nav a');
+            var home = document.querySelector('.nf-btn-solid');
             location.href = home ? home.href : '/';
         }
     });
@@ -192,15 +209,27 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             var code = pre.querySelector('code');
             var lang = '';
-            if (code && code.className && code.className.indexOf('lang-') === 0) {
-                lang = code.className.slice(5);
+            if (code && code.className) {
+                var match = /(?:^|\s)lang-([^\s]+)/.exec(code.className);
+                lang = match ? match[1] : '';
             }
             var wrap = document.createElement('figure');
             wrap.className = 'code-block';
             var header = document.createElement('figcaption');
             header.className = 'code-block-header';
-            header.innerHTML = '<span class="code-lang">' + (lang || 'text') + '</span>'
-                + '<button type="button" class="code-copy" title="复制代码"><i class="ri-file-copy-line"></i><span>复制</span></button>';
+
+            var langEl = document.createElement('span');
+            langEl.className = 'code-lang';
+            langEl.textContent = lang || 'text';
+
+            var copyBtn = document.createElement('button');
+            copyBtn.type = 'button';
+            copyBtn.className = 'code-copy';
+            copyBtn.title = '复制代码';
+            copyBtn.innerHTML = '<i class="ri-file-copy-line"></i><span>复制</span>';
+
+            header.appendChild(langEl);
+            header.appendChild(copyBtn);
             pre.parentNode.insertBefore(wrap, pre);
             wrap.appendChild(header);
             wrap.appendChild(pre);
@@ -271,7 +300,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (code.dataset.hlDone) {
                     return;
                 }
-                var m = /lang-(\w+)/.exec(code.className || '');
+                var m = /lang-([^\s]+)/.exec(code.className || '');
                 if (m) {
                     code.classList.add('language-' + m[1]);
                 }
@@ -302,6 +331,63 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ===== AJAX 局部加载：页头保持不动，仅替换页头以下内容 =====
     var navLock = false;
+    var progress = document.createElement('div');
+    progress.className = 'nav-progress';
+    progress.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(progress);
+
+    function setNavigating(on) {
+        var container = document.querySelector('.container');
+        if (on) {
+            root.classList.add('is-navigating');
+            progress.classList.remove('done');
+            if (container) {
+                container.setAttribute('aria-busy', 'true');
+            }
+        } else {
+            root.classList.remove('is-navigating');
+            if (container) {
+                container.removeAttribute('aria-busy');
+            }
+            progress.classList.add('done');
+            setTimeout(function () {
+                progress.classList.remove('done');
+            }, 450);
+        }
+    }
+
+    function saveScrollState() {
+        try {
+            var state = history.state || {};
+            state.yingScroll = window.scrollY || window.pageYOffset || 0;
+            history.replaceState(state, '', location.href);
+        } catch (e) {}
+    }
+
+    function getScrollState() {
+        try {
+            var state = history.state;
+            return state && typeof state.yingScroll === 'number' ? state.yingScroll : 0;
+        } catch (e) {
+            return 0;
+        }
+    }
+
+    function focusHeading() {
+        var heading = document.querySelector('.container h1');
+        if (!heading) {
+            return;
+        }
+        heading.setAttribute('tabindex', '-1');
+        try {
+            heading.focus({preventScroll: true});
+        } catch (e) {
+            heading.focus();
+        }
+        heading.addEventListener('blur', function () {
+            heading.removeAttribute('tabindex');
+        }, {once: true});
+    }
 
     function swapPage(doc, href) {
         var container = document.querySelector('.container');
@@ -326,12 +412,22 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        // 同步导航高亮（只切换 class，不替换页头节点）
+        // 同步导航高亮与 aria-current（只切换 class，不替换页头节点）
         var oldLis = document.querySelectorAll('.header .nav li');
         var newLis = doc.querySelectorAll('.header .nav li');
         if (oldLis.length === newLis.length) {
             Array.prototype.forEach.call(oldLis, function (li, i) {
                 li.classList.toggle('active', newLis[i].classList.contains('active'));
+                var oldLink = li.querySelector('a');
+                var newLink = newLis[i].querySelector('a');
+                if (oldLink && newLink) {
+                    var current = newLink.getAttribute('aria-current');
+                    if (current) {
+                        oldLink.setAttribute('aria-current', current);
+                    } else {
+                        oldLink.removeAttribute('aria-current');
+                    }
+                }
             });
         }
 
@@ -357,9 +453,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (oldBack) {
             oldBack.innerHTML = newBack ? newBack.innerHTML : '';
         }
+        document.body.classList.toggle('is-post', !!document.querySelector('.back-float .float-btn'));
 
         document.title = doc.title;
-        window.scrollTo(0, 0);
+        closeSearch();
         updateScrollButtons();
         decorateCodeBlocks();
         highlightCode();
@@ -371,6 +468,11 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         navLock = true;
+        if (push) {
+            saveScrollState();
+        }
+        var scrollToY = push ? 0 : getScrollState();
+        setNavigating(true);
         fetch(href, {credentials: 'same-origin'})
             .then(function (r) {
                 if (!r.ok) {
@@ -383,19 +485,28 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (!doc.querySelector('.container') || !doc.querySelector('.header')) {
                     throw new Error('not a theme page');
                 }
+                if (doc.querySelector('.container script')) {
+                    throw new Error('page contains script');
+                }
                 swapPage(doc, href);
                 if (push) {
-                    history.pushState({}, '', href);
+                    history.pushState({yingScroll: 0}, '', href);
                     try {
                         sessionStorage.setItem('yingBackable', '1');
                     } catch (e) {}
                 }
+                window.scrollTo(0, scrollToY);
+                setTimeout(function () {
+                    window.scrollTo(0, scrollToY);
+                }, 0);
+                focusHeading();
             })
             .catch(function () {
                 // 任何异常都回退到整页跳转
                 location.href = href;
             })
             .finally(function () {
+                setNavigating(false);
                 navLock = false;
             });
     }
@@ -410,7 +521,11 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         var href = a.getAttribute('href');
-        if (!href || href.charAt(0) === '#' || a.target === '_blank') {
+        if (!href || href.charAt(0) === '#' || a.hasAttribute('download') || a.hasAttribute('data-no-ajax')) {
+            return;
+        }
+        var target = a.getAttribute('target');
+        if (target && target !== '_self') {
             return;
         }
         var url;
@@ -426,6 +541,9 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         if (url.pathname.indexOf('/admin') === 0) {
+            return;
+        }
+        if (url.hash && url.pathname === location.pathname && url.search === location.search) {
             return;
         }
         e.preventDefault();

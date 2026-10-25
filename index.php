@@ -4,7 +4,7 @@
  *
  * @package YingK
  * @author yiktt
- * @version 3.1
+ * @version 3.2
  * @link https://github.com/yiktt/YingK
  */
 
@@ -12,19 +12,27 @@ if (!defined('__TYPECHO_ROOT_DIR__')) exit;
 $this->need('header.php');
 ?>
 
-<?php $this->need('nav.php'); ?>
-</div>
 <article>
     <div class="recent-posts section">
-        <h2 class="section-header">随笔<i class="ri-quill-pen-line"></i></h2>
-        <?php while ($this->next()): ?>
+        <h1 class="section-header"><?php if ($this->is('archive')): ?><?php $this->archiveTitle([
+            'category' => _t('分类：%s'),
+            'search'   => _t('搜索：%s'),
+            'tag'      => _t('标签：%s'),
+            'author'   => _t('作者：%s'),
+            'date'     => _t('归档：%s')
+        ], '', ''); ?><?php else: ?><?php _e('随笔'); ?><?php endif; ?><i class="ri-quill-pen-line" aria-hidden="true"></i></h1>
+        <?php $hasPosts = false; ?>
+        <?php while ($this->next()): $hasPosts = true; ?>
             <div class="posts">
                 <div class="post">
                     <div class="time"><?php $this->date('Y年m月d日'); ?></div>
-                    <a href="<?php $this->permalink(); ?>"><?php $this->title(); ?></a>
+                    <h2 class="post-title-link"><a href="<?php $this->permalink(); ?>"><?php $this->title(); ?></a></h2>
                 </div>
             </div>
         <?php endwhile; ?>
+        <?php if (!$hasPosts): ?>
+            <p class="list-empty">暂无文章。</p>
+        <?php endif; ?>
     </div>
 </article>
 <ul class="pagination">

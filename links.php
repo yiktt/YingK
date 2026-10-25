@@ -64,8 +64,6 @@ if ($this->options->linksShow !== 'off') {
 }
 ?>
 
-<?php $this->need('nav.php'); ?>
-</div>
 <header class="page-header">
     <h1 class="page-title" itemprop="name headline"><?php $this->title(); ?></h1>
     <span class="page-rule" aria-hidden="true"></span>
@@ -81,7 +79,7 @@ if ($this->options->linksShow !== 'off') {
         <li class="link-card">
             <a href="<?php echo htmlspecialchars($friend['url'], ENT_QUOTES); ?>" target="_blank" rel="noopener">
                 <?php if ($friend['avatar'] !== ''): ?>
-                <img class="link-avatar-img" src="<?php echo htmlspecialchars($friend['avatar'], ENT_QUOTES); ?>" alt="<?php echo htmlspecialchars($friend['name'], ENT_QUOTES); ?>"/>
+                <img class="link-avatar-img" src="<?php echo htmlspecialchars($friend['avatar'], ENT_QUOTES); ?>" alt="<?php echo htmlspecialchars($friend['name'], ENT_QUOTES); ?>" width="38" height="38" loading="lazy" decoding="async"/>
                 <?php else: ?>
                 <span class="link-avatar link-color-<?php echo $i % 5; ?>"><?php echo htmlspecialchars(mb_substr($friend['name'], 0, 1, 'UTF-8')); ?></span>
                 <?php endif; ?>

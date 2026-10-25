@@ -12,21 +12,16 @@ function themeInit($archive)
 }
 
 /**
- * 浏览次数 +1（存于 typecho_fields 表；按 cid+IP+日期 去重防刷）
+ * 浏览次数 +1（存于 typecho_fields 表；同一浏览器 24 小时去重）
  */
 function yingBumpViews(int $cid): void
 {
+    $cookie = 'ying_view_' . $cid;
+    if (isset($_COOKIE[$cookie])) {
+        return;
+    }
     try {
         $db = \Typecho\Db::get();
-        // 每日每 IP 每 cid 只计一次
-        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
-        $day = date('Ymd');
-        $sig = md5($cid . '|' . $ip . '|' . $day);
-        $dup = $db->fetchRow($db->select('name')->from('table.fields')
-            ->where('cid = ?', $cid)->where('name = ?', 'view_' . $sig));
-        if ($dup) {
-            return;
-        }
         $row = $db->fetchRow($db->select('int_value')->from('table.fields')
             ->where('cid = ?', $cid)->where('name = ?', 'views'));
         if ($row) {
@@ -37,30 +32,35 @@ function yingBumpViews(int $cid): void
             $db->query($db->insert('table.fields')
                 ->rows(['cid' => $cid, 'name' => 'views', 'type' => 'int', 'int_value' => 1]));
         }
-        // 记录去重标记（30 天后由下次写入时惰性清理）
-        $db->query($db->insert('table.fields')
-            ->rows(['cid' => $cid, 'name' => 'view_' . $sig, 'type' => 'str', 'str_value' => $day]));
-        yingPruneViewMarks($db, $cid);
+        setcookie($cookie, '1', [
+            'expires' => time() + 86400,
+            'path' => '/',
+            'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
     } catch (\Exception $e) {
         // 计数失败不影响正常输出
     }
 }
 
 /**
- * 惰性清理 30 天前的去重标记
+ * 清理旧版按 IP/日期写入的 view_<md5> 去重标记
  */
-function yingPruneViewMarks($db, int $cid): void
+function yingCleanupLegacyViewMarks(): void
 {
-    $cutoff = date('Ymd', strtotime('-30 days'));
-    $stale = $db->fetchAll($db->select('name')->from('table.fields')
-        ->where('cid = ?', $cid)
-        ->where('type = ?', 'str')
-        ->where('name LIKE ?', 'view\\_%')
-        ->where('str_value < ?', $cutoff)
-        ->limit(50));
-    foreach ($stale as $s) {
-        $db->query($db->delete('table.fields')
-            ->where('cid = ?', $cid)->where('name = ?', $s['name']));
+    try {
+        $db = \Typecho\Db::get();
+        $rows = $db->fetchAll($db->select('cid', 'name')->from('table.fields')
+            ->where('type = ?', 'str')
+            ->where('name LIKE ?', 'view%'));
+        foreach ($rows as $row) {
+            if (preg_match('/^view_[0-9a-f]{32}$/', (string)$row['name'])) {
+                $db->query($db->delete('table.fields')
+                    ->where('cid = ?', $row['cid'])->where('name = ?', $row['name']));
+            }
+        }
+    } catch (\Exception $e) {
     }
 }
 
@@ -145,11 +145,11 @@ function yingFriendsEditorHtml(): string
                 img.style.borderRadius = '50%';
                 img.style.objectFit = 'cover';
                 img.onerror = function () {
-                    el.innerHTML = (name || '友').substring(0, 1);
+                    el.textContent = (name || '友').substring(0, 1);
                 };
                 el.appendChild(img);
             } else {
-                el.innerHTML = (name || '友').substring(0, 1);
+                el.textContent = (name || '友').substring(0, 1);
             }
         }
 
@@ -349,12 +349,14 @@ HTML;
 
 function themeConfig($form)
 {
+    yingCleanupLegacyViewMarks();
+
     $logoUrl = new \Typecho\Widget\Helper\Form\Element\Text(
         'logoUrl',
         null,
         null,
         _t('头像'),
-        _t('在这里填入一个头像 URL 地址')
+        _t('在这里填入一个头像 URL 地址，留空使用主题内置头像。')
     );
     $form->addInput($logoUrl->addRule('url', _t('请填写一个合法的 URL 地址')));
 
@@ -370,9 +372,9 @@ function themeConfig($form)
     $yiyan = new \Typecho\Widget\Helper\Form\Element\Textarea(
         'yiyan',
         null,
-        '道德当身，故不已物惑',
+        '道德当身，故不以物惑',
         _t('一言（固定内容）'),
-        _t('仅在上方选择"固定内容"时使用，将会显示在头像旁边。')
+        _t('仅在上方选择"固定内容"时使用，将会显示在头像旁边；纯文本。')
     );
     $form->addInput($yiyan);
 
@@ -410,7 +412,7 @@ function themeConfig($form)
         _t('背景图'),
         _t('在这里填入背景图 URL（全站生效），留空使用主题内置背景。')
     );
-    $form->addInput($bgUrl);
+    $form->addInput($bgUrl->addRule('url', _t('请填写一个合法的 URL 地址')));
 
     // 联系方式：存于 contactsJson（JSON）；为空且旧字段有数据时从旧版固定字段迁移
     $optionsWidgetC = \Widget\Options::alloc();
@@ -433,8 +435,26 @@ function themeConfig($form)
         }
     }
 
-    $contactsEl = new \Typecho\Widget\Helper\Form\Element\Text('contactsJson', null, $contactsInit, _t('联系方式管理'), _t('点击下方按钮添加联系方式，选择类型、填写链接后保存；显示在头像行最右侧。'));
+    $jsonListRule = function ($value): bool {
+        $value = trim((string)$value);
+        if ($value === '') {
+            return true;
+        }
+        $data = json_decode($value, true);
+        if (!is_array($data)) {
+            return false;
+        }
+        foreach ($data as $item) {
+            if (!is_array($item)) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    $contactsEl = new \Typecho\Widget\Helper\Form\Element\Text('contactsJson', null, $contactsInit, _t('联系方式管理'), _t('点击下方按钮添加联系方式，选择类型、填写链接后保存；桌面端显示在头像行右侧，窄屏自动换行。'));
     $contactsEl->description(yingContactsEditorHtml());
+    $contactsEl->addRule($jsonListRule, _t('联系方式数据格式错误，请重新添加后再保存。'));
     $form->addInput($contactsEl);
 
     $copyright = new \Typecho\Widget\Helper\Form\Element\Text(
@@ -505,5 +525,6 @@ function themeConfig($form)
 
     $friendsEl = new \Typecho\Widget\Helper\Form\Element\Text('friendsJson', null, $friendsInit, _t('友链管理'), _t('点击下方按钮添加友链，填写后保存即可；数据自动同步。'));
     $friendsEl->description(yingFriendsEditorHtml());
+    $friendsEl->addRule($jsonListRule, _t('友链数据格式错误，请重新添加后再保存。'));
     $form->addInput($friendsEl);
 }

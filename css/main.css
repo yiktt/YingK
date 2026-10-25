@@ -12,8 +12,8 @@
     --link: #24292e;
     --link-muted: #586069;
     --link-hover: #646464;
-    --faint: #999999;
-    --time: #bec8d2;
+    --faint: #767676;
+    --time: #6b7280;
     --border-soft: #f4f4f4;
     --border-strong: #cccccc;
     --code-bg: #3a3a3a;
@@ -54,8 +54,8 @@
     --link: #d2d5da;
     --link-muted: #9aa2ad;
     --link-hover: #c3c9d2;
-    --faint: #7d8590;
-    --time: #6b7480;
+    --faint: #9aa2ad;
+    --time: #8b95a1;
     --border-soft: #34363c;
     --border-strong: #4a4f57;
     --code-bg: #1b1c1f;
@@ -206,6 +206,7 @@ a img {
     display: inline-flex;
     align-items: center;
     gap: 5px;
+    min-height: 28px;
     background: none;
     border: 0;
     padding: 3px 8px;
@@ -393,6 +394,35 @@ a:hover {
     text-decoration: underline
 }
 
+/* 正文链接：默认可见下划线，暗色同样可辨 */
+.post-content a {
+    color: var(--link-muted);
+    text-decoration: underline;
+    text-decoration-color: var(--border-strong);
+    text-underline-offset: 3px;
+    transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+.post-content a:hover {
+    color: var(--link-hover);
+    text-decoration-color: currentColor;
+}
+
+/* 正文列表：仅恢复无自定义类名列表的项目符号与缩进 */
+.post-content ul:not([class]) {
+    list-style: disc;
+    padding-left: 1.5em;
+}
+
+.post-content ol {
+    padding-left: 1.5em;
+}
+
+.post-content ul:not([class]) > li,
+.post-content ol > li {
+    margin: 0.25em 0;
+}
+
 h1, h2, h3, h4, h5, h6 {
     line-height: 1.2;
     font-weight: 400;
@@ -463,20 +493,20 @@ ul {
     line-height: 2rem;
 }
 
-.header nav {
+.header > nav {
     border-top: 1px solid var(--border-soft);
 }
 
-.header nav ul,
-.header nav li {
+.header > nav ul,
+.header > nav li {
     margin: 0;
 }
 
-.header nav ul.flat {
+.header > nav ul.flat {
     padding: 0;
 }
 
-.header nav ul.flat li {
+.header > nav ul.flat li {
     display: inline-block;
     list-style: none;
     margin-left: 0;
@@ -485,15 +515,15 @@ ul {
     text-transform: capitalize;
 }
 
-.header nav ul.flat li.active a {
+.header > nav ul.flat li.active a {
     color: var(--link);
 }
 
-.header nav ul.flat li a {
+.header > nav ul.flat li a {
     color: var(--link-muted);
 }
 
-.header nav ul.flat li a:hover {
+.header > nav ul.flat li a:hover {
     color: var(--link-hover);
     text-decoration: none;
 }
@@ -503,12 +533,6 @@ ul {
     justify-content: space-between;
 }
 
-.header .site-description nav ul a {
-    display: inline-block;
-    margin-right: 5px;
-    text-decoration: none;
-}
-
 /* 夜间/白天切换按钮样式已并入 .float-btn */
 
 .section .section-header {
@@ -516,12 +540,19 @@ ul {
     font-weight: 600;
     text-transform: uppercase;
     color: var(--faint);
-    margin-bottom: 20px;
+    margin: 0 0 20px;
     letter-spacing: 1px;
 }
 
 .recent-posts .posts .post {
     margin-bottom: 30px;
+}
+
+.recent-posts .posts .post .post-title-link {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.6;
 }
 
 .recent-posts .posts .post .time,
@@ -547,6 +578,18 @@ ul {
     margin-top: 40px;
 }
 
+.post-tags .tags ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+}
+
+.post-tags .tags li {
+    margin: 0;
+}
+
 .post-tags .tags a {
     display: inline-block;
     border-radius: 2px;
@@ -555,7 +598,7 @@ ul {
     line-height: 20px;
     font-size: 12px;
     text-decoration: none;
-    margin: 0 1px;
+    margin: 0;
     border: 1px solid var(--tag-bg);
     background-color: var(--tag-bg);
 }
@@ -641,6 +684,23 @@ ul {
         padding: 30px;
         margin: 0 auto;
         box-shadow: none;
+    }
+
+    body.is-post .main {
+        padding-top: 64px;
+    }
+
+    .header-top {
+        flex-wrap: wrap;
+        row-gap: 12px;
+    }
+
+    .nav.contacts {
+        width: 100%;
+    }
+
+    .nav.contacts ul.flat {
+        justify-content: flex-start;
     }
 
     .header h2 {
@@ -819,7 +879,7 @@ ul {
     backdrop-filter: blur(10px);
     color: var(--text);
     font: inherit;
-    font-size: 14px;
+    font-size: 16px;
     outline: none;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
 }
@@ -910,20 +970,34 @@ ul {
     }
 
     .float-btn {
-        width: 38px;
-        height: 38px;
+        width: 44px;
+        height: 44px;
         margin-top: 8px;
         font-size: 17px;
     }
 
     .scroll-btn.show {
-        height: 38px;
+        height: 44px;
         margin-top: 8px;
+    }
+
+    .top-menu-btn {
+        width: 44px;
+        height: 44px;
+    }
+
+    .top-menu-items {
+        max-height: 220px;
     }
 
     .back-float {
         left: 14px;
         top: 14px;
+    }
+
+    .back-float .float-btn {
+        width: 44px;
+        height: 44px;
     }
 
     .search-panel input {
@@ -1089,6 +1163,17 @@ darkb-text:active {
     border: 0;
 }
 
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
 /* 404 页 */
 
 .notfound {
@@ -1145,7 +1230,7 @@ darkb-text:active {
     backdrop-filter: blur(10px);
     color: var(--text);
     font: inherit;
-    font-size: 14px;
+    font-size: 16px;
     outline: none;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
     text-align: center;
@@ -1207,6 +1292,10 @@ darkb-text:active {
 @media (max-width: 567px) {
     .notfound-code {
         font-size: 5.2rem;
+    }
+
+    .nf-btn {
+        padding: 12px 24px;
     }
 }
 
@@ -1332,6 +1421,11 @@ darkb-text:active {
     text-align: center;
 }
 
+.list-empty {
+    color: var(--faint);
+    text-align: center;
+}
+
 @media (max-width: 567px) {
     .links-grid {
         grid-template-columns: 1fr;
@@ -1451,6 +1545,15 @@ darkb-text:active {
     text-decoration: none;
 }
 
+.archives-item-title a,
+.post-content .archives-link {
+    text-decoration: none;
+}
+
+.post-content .archives-link {
+    color: var(--link);
+}
+
 .archives-count {
     font-size: 12px;
     line-height: 18px;
@@ -1486,4 +1589,34 @@ darkb-text:active {
 
 .archives-link:hover {
     color: var(--link-hover);
+}
+
+/* AJAX 局部加载进度条与换页焦点 */
+.nav-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: var(--link-muted);
+    opacity: 0;
+    z-index: 1000;
+    pointer-events: none;
+    transition: width 0.3s ease, opacity 0.2s ease;
+}
+
+html.is-navigating .nav-progress {
+    width: 70%;
+    opacity: 1;
+    transition: width 1.6s ease-out, opacity 0.2s ease;
+}
+
+.nav-progress.done {
+    width: 100%;
+    opacity: 0;
+    transition: width 0.2s ease, opacity 0.25s ease 0.1s;
+}
+
+.container h1[tabindex="-1"]:focus {
+    outline: none;
 }

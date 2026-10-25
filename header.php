@@ -1,5 +1,21 @@
 <?php if (!defined('__TYPECHO_ROOT_DIR__')) exit;
 $bgUrl = $this->options->bgUrl ? $this->options->bgUrl : $this->options->themeUrl . '/img/bg-default.jpg';
+$bgCss = strtr($bgUrl, [
+    '\\' => '\\\\',
+    "'"  => "\\'",
+    '"'  => '\\"',
+    '<'  => '\\3c ',
+    '>'  => '\\3e ',
+    "\n" => '\\a ',
+    "\r" => '\\d ',
+    "\f" => '\\c ',
+]);
+$logoUrl = trim((string)$this->options->logoUrl);
+if ($logoUrl === '') {
+    $logoUrl = $this->options->themeUrl . '/avatar.png';
+}
+$logoUrl = htmlspecialchars($logoUrl, ENT_QUOTES);
+$siteTitle = htmlspecialchars((string)$this->options->title, ENT_QUOTES);
 $alphaRaw = trim((string)$this->options->cardAlpha);
 $alphaVal = is_numeric($alphaRaw) && $alphaRaw !== '' ? floatval($alphaRaw) : 75;
 if ($alphaVal > 1) {
@@ -69,13 +85,13 @@ $yiyanCats = implode(',', (array)$this->options->yiyanCats);
 <head>
     <meta charset="<?php $this->options->charset(); ?>">
     <meta name="renderer" content="webkit">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?php $this->archiveTitle([
             'category' => _t('分类 %s 下的文章'),
             'search'   => _t('包含关键字 %s 的文章'),
             'tag'      => _t('标签 %s 下的文章'),
             'author'   => _t('%s 发布的文章')
-        ], '', ' - '); ?><?php $this->options->title(); ?></title>
+        ], '', ' - '); ?><?php echo $siteTitle; ?></title>
 
     <script>
     (function () {
@@ -89,25 +105,23 @@ $yiyanCats = implode(',', (array)$this->options->yiyanCats);
     })();
     </script>
 
-    <link rel="stylesheet" href="<?php $this->options->themeUrl('css/main.css'); ?>">
     <link rel="stylesheet" href="<?php $this->options->themeUrl('css/normalize.min.css'); ?>">
+    <link rel="stylesheet" href="<?php $this->options->themeUrl('css/main.css'); ?>">
     <link rel="stylesheet" href="<?php $this->options->themeUrl('css/remixicon.min.css'); ?>">
-    <style>:root { --page-bg: url('<?php echo htmlspecialchars($bgUrl, ENT_QUOTES); ?>'); --card-alpha: <?php echo htmlspecialchars($cardAlpha, ENT_QUOTES); ?>; }</style>
-    <?php $this->header(); ?>
+    <style>:root { --page-bg: url('<?php echo $bgCss; ?>'); --card-alpha: <?php echo $cardAlpha; ?>; }</style>
+    <?php $this->header('generator=&wlw='); ?>
 </head>
-<body>
+<body<?php if ($this->is('post')): ?> class="is-post"<?php endif; ?>>
     <div class="main">
         <div class="container">
             <div class="header">
                 <div class="header-top">
-                <?php if ($this->options->logoUrl): ?>
-                    <img src="<?php $this->options->logoUrl(); ?>" width="72" height="72" alt="<?php $this->options->title(); ?>"/>
-                <?php endif; ?>
+                <img src="<?php echo $logoUrl; ?>" width="72" height="72" alt="<?php echo $siteTitle; ?>"/>
                 <?php if ($contacts): ?>
-                    <nav class="nav contacts">
+                    <nav class="nav contacts" aria-label="联系方式">
                         <ul class="flat">
                             <?php foreach ($contacts as $contact): ?>
-                            <li><a href="<?php echo htmlspecialchars($contact['url'], ENT_QUOTES); ?>"<?php if (stripos($contact['url'], 'http') === 0): ?> target="_blank" rel="noopener"<?php endif; ?> title="<?php echo htmlspecialchars($contact['label'], ENT_QUOTES); ?>"><i class="<?php echo $contact['icon']; ?>"></i></a></li>
+                            <li><a href="<?php echo htmlspecialchars($contact['url'], ENT_QUOTES); ?>"<?php if (stripos($contact['url'], 'http') === 0): ?> target="_blank" rel="noopener"<?php endif; ?> title="<?php echo htmlspecialchars($contact['label'], ENT_QUOTES); ?>" aria-label="<?php echo htmlspecialchars($contact['label'], ENT_QUOTES); ?>"><i class="<?php echo $contact['icon']; ?>"></i></a></li>
                             <?php endforeach; ?>
                         </ul>
                     </nav>
@@ -117,6 +131,8 @@ $yiyanCats = implode(',', (array)$this->options->yiyanCats);
                     <?php if ($this->options->yiyanSource === 'api'): ?>
                     <h2><span id="yiyan-text" class="is-loading" data-cats="<?php echo htmlspecialchars($yiyanCats, ENT_QUOTES); ?>" data-from="<?php echo $this->options->yiyanShowFrom === 'on' ? '1' : '0'; ?>" data-fallback="<?php echo htmlspecialchars((string)$this->options->yiyan, ENT_QUOTES); ?>">…</span></h2>
                     <?php else: ?>
-                    <h2><span><?php $this->options->yiyan(); ?></span></h2>
+                    <h2><span><?php echo htmlspecialchars((string)$this->options->yiyan, ENT_QUOTES); ?></span></h2>
                     <?php endif; ?>
                 </div>
+                <?php $this->need('nav.php'); ?>
+            </div>
