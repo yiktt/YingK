@@ -18,37 +18,11 @@
 
 ### 首页
 
-![YingK 首页：头像、一言、导航与文章列表](docs/preview-home.png)
-
-### 文章页
-
 | 白天 | 夜间 |
 | --- | --- |
-| ![YingK 文章页白天模式](screenshot.png) | ![YingK 文章页夜间模式](docs/preview-dark.png) |
+| ![YingK 首页白天模式](docs/preview-home.png) | ![YingK 首页夜间模式](docs/preview-home-dark.png) |
 
 YingK 基于 [heysiu/Ying](https://github.com/heysiu/Ying) 二次开发，重做了移动端布局、局部加载、主题设置与阅读细节，没有保留上游的评论功能。无 jQuery；图标、代码高亮与背景本地托管；字体不打包；可选一言 API 会访问 `v1.hitokoto.cn`。
-
-> [!NOTE]
-> **状态**：个人维护 · Typecho 1.2.1+（1.3.0 实测）· 最近验证 2026-10
->
-> **刻意不做**：评论、侧栏、用户系统
->
-> **许可边界**：本仓库新增/修改代码为 MIT；上游 Ying 未声明许可证，商业或闭源再分发前请先确认上游授权。
-
-## 为什么是 YingK
-
-YingK 不是功能型 CMS 主题，它把预算放在“读”这件事上：
-
-- **单栏、无评论、无侧栏**：阅读时没有侧栏、评论区和用户系统打断。
-- **内容局部加载**：站内跳转只替换内容区，前进/后退恢复滚动位置，焦点回到新页面标题。
-- **主题包轻量**：字体不打包；默认读取后台字体库中的本地字体，未选择时使用系统字体；鸿蒙 CDN 与自定义地址可选。图标、代码高亮与背景仍在主题内。
-- **配置克制**：头像、一言、字体、背景、卡片透明度、联系方式、友链、备案都在后台完成，不引入页面构建器。
-
-**适合**：想要安静阅读、愿意自己维护 Typecho 的个人站点。
-
-**不适合**：需要评论、侧栏、复杂页面构建器或多人协作的站点。
-
-**代价**：主题包本身不含字体，约 1.4MB；默认使用字体库中选中的本地字体（未选择时使用系统字体），首屏只加载该文件。切换到鸿蒙 CDN 时会额外下载约 5.4MB 的完整中文字体；系统字体模式不加载字体文件。`font-display: swap` 不阻塞文字显示。具体见[兼容性与性能](#兼容性与性能)。
 
 ## 快速开始
 
@@ -140,11 +114,11 @@ git clone https://github.com/yiktt/YingK.git YingK
 
 字体不随主题分发。默认使用站点本地字体；鸿蒙 CDN 是可选来源；后台上传的字体由站点管理员自行提供，保存在 `usr/uploads/fonts`，不属于本仓库。上传前请确认字体授权允许你的站点使用。
 
-原主题 **Ying** 的归属以上游仓库为准：[heysiu/Ying](https://github.com/heysiu/Ying)。该仓库所有者为 [heysiu](https://github.com/heysiu)（GitHub 资料名 Siu），上游 [README](https://github.com/heysiu/Ying/blob/main/README.md#L11) 鸣谢油佬。原仓库未声明许可证。本项目保留上游仓库信息，原始主题的设计与素材版权归其原作者及贡献者所有；如需将原主题部分用于闭源或商业再分发，请先取得上游作者的明确授权。
+原主题 **Ying** 的归属以上游仓库为准：[heysiu/Ying](https://github.com/heysiu/Ying)。该仓库所有者为 [heysiu](https://github.com/heysiu)（GitHub 资料名 Siu）。原仓库未声明许可证。本项目保留上游仓库信息，原始主题的设计与素材版权归其原作者及贡献者所有；如需将原主题部分用于闭源或商业再分发，请先取得上游作者的明确授权。
 
 ## 致谢
 
-- 原主题：[heysiu/Ying](https://github.com/heysiu/Ying)，上游 README 鸣谢油佬
+- 原主题：[heysiu/Ying](https://github.com/heysiu/Ying)
 - 字体：HarmonyOS Sans SC Medium（可选鸿蒙 CDN 来源；Copyright Huawei Device Co., Ltd.，HarmonyOS Fonts License Agreement）
 - 图标：[Remix Icon](https://remixicon.com/)（Remix Icon License 1.0）
 - 代码高亮：[highlight.js](https://highlightjs.org/) v11.11.1（BSD-3-Clause）
