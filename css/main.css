@@ -1,4 +1,12 @@
-/* 正文/一言字体：宋体 + Times New Roman（系统自带，无 webfont 依赖） */
+/* 正文/一言字体：HarmonyOS Sans SC Medium（主题内置，font-display: swap） */
+
+@font-face {
+    font-family: 'HarmonyOS Sans SC Medium';
+    src: url('../font/HarmonyOS_Sans/HarmonyOS_Sans_SC_Medium.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
 
 /* ========== 主题色板：白天 / 夜间 ========== */
 
@@ -138,7 +146,7 @@ html {
 }
 
 body {
-    font-family: 'Times New Roman', SimSun, '宋体', serif;
+    font-family: 'HarmonyOS Sans SC Medium', serif;
     color: var(--text);
     line-height: 1.6;
     font-size: 16px;
@@ -1305,9 +1313,8 @@ darkb-text:active {
     }
 }
 
-/* 一言：宋体 + Times New Roman，与正文同族、以字号与墨色区分层次 */
+/* 一言：与正文同族（HarmonyOS Sans SC），以字号与墨色区分层次 */
 .site-description h2 {
-    font-family: 'Times New Roman', SimSun, '宋体', serif;
     font-weight: normal;
     font-size: 1.08rem;
     line-height: 1.9;

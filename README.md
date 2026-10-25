@@ -13,13 +13,19 @@ YingK 基于 [heysiu/Ying](https://github.com/heysiu/Ying) 二次开发，重做
 
 截图使用 Typecho 1.3.0 + PHP 8.3 实际渲染，内容为演示文章。
 
+### 首页
+
+![首页](docs/preview-home.png)
+
+### 文章页
+
 | 白天 | 夜间 |
 | --- | --- |
 | ![白天模式](screenshot.png) | ![夜间模式](docs/preview-dark.png) |
 
 ## 特性
 
-- **阅读优先**：600px 单栏、宋体 + Times New Roman、安静的留白与玻璃卡片。
+- **阅读优先**：600px 单栏、HarmonyOS Sans SC Medium、安静的留白与玻璃卡片。
 - **夜间模式**：跟随系统偏好、localStorage 记忆、右上工具坞一键切换，首屏无闪白。
 - **AJAX 局部加载**：站内跳转只替换内容区，页头保持不动；支持前进/后退、滚动位置恢复与标题焦点管理。
 - **一言**：固定内容或一言 API；API 模式可多选分类、可选出处，3 秒超时后自动回退固定内容。
@@ -122,8 +128,8 @@ YingK 基于 [heysiu/Ying](https://github.com/heysiu/Ying) 二次开发，重做
 ## 兼容性与性能
 
 - **固定链接**：默认 `/archives/{cid}/`、`/archives/{slug}.html`、日期归档、分类归档均已实测；归档页使用 Typecho 内容组件生成链接，不依赖手动拼接。
-- **资源**：无构建步骤、无运行时框架。首屏约 0.5MB（未压缩，含图标字体与背景图）；文章含代码时再按需加载约 127KB 的 highlight.js。
-- **字体**：正文使用系统宋体 / Times New Roman；RemixIcon 仅保留 woff2，减少安装包体积。
+- **资源**：无构建步骤、无运行时框架。首屏约 5.9MB（未压缩；HarmonyOS 字体约 5.4MB，图标、背景与脚本约 0.5MB；`font-display: swap` 不阻塞文字显示）；文章含代码时再按需加载约 127KB 的 highlight.js。
+- **字体**：正文与一言使用主题内置 HarmonyOS Sans SC Medium（woff，`font-display: swap`）；RemixIcon 仅保留 woff2，减少安装包体积。
 - **可访问性**：支持键盘焦点、`aria-current`、`aria-pressed`、`aria-expanded`、减少动态效果偏好；主要触控目标提升到 44px；已移除禁止缩放的 viewport 设置。
 - **响应式**：390 / 752 / 1000 / 1200 宽度与浅色/暗色均已回归验证。
 
@@ -158,6 +164,7 @@ YingK 基于 [heysiu/Ying](https://github.com/heysiu/Ying) 二次开发，重做
 - 新增 `about.php` 关于模板，旧 `start-page` slug 继续兼容。
 - 提升小字对比度、触控尺寸、键盘 ARIA 与减少动态效果支持；允许页面缩放。
 - 修正背景图 URL 的 CSS 转义、默认一言错字、标签列表标记、normalize 加载顺序；默认头像使用内置图片。
+- 恢复原始 HarmonyOS Sans SC Medium 字体（本地 woff，`font-display: swap`），正文与一言重新使用鸿蒙字体。
 - RemixIcon 仅保留 woff2，移除冗余字体；重写 README 与主题截图。
 
 ## 开发与验证
@@ -170,11 +177,12 @@ YingK 基于 [heysiu/Ying](https://github.com/heysiu/Ying) 二次开发，重做
 
 本仓库中 YingK 的修改与新增代码以 **MIT** 协议发布，详见 [LICENSE](LICENSE)。
 
-原主题 **Ying（颖）** 的归属以上游仓库为准：[heysiu/Ying](https://github.com/heysiu/Ying)。上游代码在 [index.php](https://github.com/heysiu/Ying/blob/main/index.php#L6) 头部标注 `@author 颖宝`；该仓库所有者为 [heysiu](https://github.com/heysiu)（GitHub 资料名 Siu），上游 [README](https://github.com/heysiu/Ying/blob/main/README.md#L11) 鸣谢油佬。原仓库未声明许可证。本项目保留上述代码署名与上游仓库信息，原始主题的设计与素材版权归其原作者及贡献者所有；如需将原主题部分用于闭源或商业再分发，请先取得上游作者的明确授权。
+原主题 **Ying** 的归属以上游仓库为准：[heysiu/Ying](https://github.com/heysiu/Ying)。该仓库所有者为 [heysiu](https://github.com/heysiu)（GitHub 资料名 Siu），上游 [README](https://github.com/heysiu/Ying/blob/main/README.md#L11) 鸣谢油佬。原仓库未声明许可证。本项目保留上游仓库信息，原始主题的设计与素材版权归其原作者及贡献者所有；如需将原主题部分用于闭源或商业再分发，请先取得上游作者的明确授权。
 
 ## 致谢
 
-- 原主题：[heysiu/Ying](https://github.com/heysiu/Ying)；代码头部署名 `@author 颖宝`，上游 README 鸣谢油佬
+- 原主题：[heysiu/Ying](https://github.com/heysiu/Ying)，上游 README 鸣谢油佬
+- 字体：HarmonyOS Sans SC Medium（Copyright Huawei Device Co., Ltd.，HarmonyOS Fonts License Agreement）
 - 图标：[Remix Icon](https://remixicon.com/)（Remix Icon License 1.0）
 - 代码高亮：[highlight.js](https://highlightjs.org/) v11.11.1（BSD-3-Clause）
 - 博客程序：[Typecho](https://typecho.org/)

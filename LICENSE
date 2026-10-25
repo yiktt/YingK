@@ -2,10 +2,9 @@ MIT License
 
 Copyright (c) 2026 YingK contributors
 
-Original theme "Ying (颖)": the upstream code header declares @author 颖宝
-(https://github.com/heysiu/Ying/blob/main/index.php); the upstream
-repository heysiu/Ying is owned by Siu (heysiu), and its README credits
-油佬 (https://github.com/heysiu/Ying/blob/main/README.md). The original
+Original theme "Ying": upstream repository https://github.com/heysiu/Ying
+(owned by Siu / heysiu); its README credits 油佬
+(https://github.com/heysiu/Ying/blob/main/README.md). The original
 repository did not declare a license. The MIT grant below applies to the
 modifications and additions made in this repository; the original theme,
 its design and its assets remain attributed to their original author(s).
@@ -29,5 +28,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 Third-party assets bundled with this theme:
+- HarmonyOS Sans SC Medium: Copyright Huawei Device Co., Ltd., subject to the
+  HarmonyOS Fonts License Agreement.
 - Remix Icon: Remix Icon License 1.0 (https://remixicon.com/).
 - highlight.js v11.11.1: BSD-3-Clause (https://highlightjs.org/).
