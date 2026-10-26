@@ -12,13 +12,13 @@
             key: 'masthead',
             eyebrow: 'MASTHEAD',
             title: '页头',
-            fields: ['logoUrl', 'yiyanSource', 'yiyanShowFrom', 'yiyan', 'yiyanCats']
+            fields: ['logoUrl', 'faviconUrl', 'yiyanSource', 'yiyanPosition', 'yiyanShowFrom', 'yiyan', 'yiyanCats']
         },
         {
             key: 'surface',
             eyebrow: 'SURFACE',
             title: '页面',
-            fields: ['bgUrl', 'cardAlpha']
+            fields: ['bgUrl', 'cardAlpha', 'newPostMark', 'siteStartDate']
         },
         {
             key: 'colophon',
@@ -34,7 +34,7 @@
         }
     ];
 
-    var WIDE_FIELDS = ['logoUrl', 'yiyan', 'yiyanCats', 'contactsJson', 'friendsJson', 'policebeian'];
+    var WIDE_FIELDS = ['yiyan', 'yiyanCats', 'contactsJson', 'friendsJson', 'policebeian'];
 
     function formatBytes(bytes) {
         if (bytes >= 1048576) {
@@ -162,6 +162,20 @@
         });
         if (saveBar) {
             form.appendChild(saveBar);
+        }
+
+        // 一言来源与一言位置合并为一张卡片，内部左右两栏。
+        var yiyanSourceField = findField('yiyanSource');
+        var yiyanPosField = findField('yiyanPosition');
+        if (yiyanSourceField && yiyanPosField && yiyanSourceField !== yiyanPosField
+            && yiyanSourceField.parentNode === yiyanPosField.parentNode) {
+            var mergedCard = document.createElement('div');
+            mergedCard.className = 'ying-yiyan-merged ying-field-wide';
+            yiyanSourceField.parentNode.insertBefore(mergedCard, yiyanSourceField);
+            mergedCard.appendChild(yiyanSourceField);
+            mergedCard.appendChild(yiyanPosField);
+            yiyanSourceField.classList.add('ying-merged-col');
+            yiyanPosField.classList.add('ying-merged-col');
         }
 
         // 友链页开关与友链名单同宽排布，避免单独占半列留下空白。

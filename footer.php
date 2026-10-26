@@ -1,4 +1,5 @@
 <?php if (!defined('__TYPECHO_ROOT_DIR__')) exit; ?>
+            </main>
             <div class="footer">
                  <nav class="nav" aria-label="页脚信息">
                 <?php $copyrightText = trim((string)$this->options->copyright); ?>
@@ -37,6 +38,6 @@
         <a href="<?php $this->options->siteUrl(); ?>" id="back-btn" class="float-btn" aria-label="返回列表"><i class="ri-arrow-left-line"></i></a>
         <?php endif; ?>
     </div>
-    <script src="<?php $this->options->themeUrl('js/app.js'); ?>"></script>
+    <script src="<?php $this->options->themeUrl('js/app.js'); ?>?v=<?php echo (int)filemtime(__DIR__ . '/js/app.js'); ?>"></script>
 </body>
 </html>

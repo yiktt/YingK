@@ -699,6 +699,43 @@
     display: block;
 }
 
+/* 一言来源 + 一言位置合并卡片：同一张卡内左右两栏 */
+.ying-settings .ying-yiyan-merged {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 18px;
+    padding: 18px 20px;
+    background: var(--ying-surface);
+    border: 1px solid var(--ying-line);
+    border-radius: 16px;
+}
+
+.ying-settings .ying-yiyan-merged > .typecho-option {
+    min-width: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+}
+
+.ying-settings .ying-yiyan-merged > .typecho-option + .typecho-option {
+    padding-left: 18px;
+    border-left: 1px dashed var(--ying-line);
+}
+
+@media (max-width: 767px) {
+    .ying-settings .ying-yiyan-merged {
+        grid-template-columns: 1fr;
+    }
+
+    .ying-settings .ying-yiyan-merged > .typecho-option + .typecho-option {
+        padding-left: 0;
+        padding-top: 14px;
+        border-left: 0;
+        border-top: 1px dashed var(--ying-line);
+    }
+}
+
 .ying-settings .ying-inline-head {
     display: flex;
     align-items: center;

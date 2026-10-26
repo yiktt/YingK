@@ -54,44 +54,38 @@ if ($this->options->linksShow !== 'off') {
         if ($avatar !== '' && !preg_match('/^https?:\/\//i', $avatar)) {
             $avatar = '';
         }
+        $host = parse_url($url, PHP_URL_HOST) ?: $url;
         $friends[] = [
             'name' => $name,
             'url' => $url,
-            'desc' => $desc !== '' ? $desc : (parse_url($url, PHP_URL_HOST) ?: $url),
+            'desc' => $desc,
+            'host' => $host,
             'avatar' => $avatar,
         ];
     }
 }
+$friendCount = count($friends);
 ?>
 
-<header class="page-header">
-    <h1 class="page-title" itemprop="name headline"><?php $this->title(); ?></h1>
-    <span class="page-rule" aria-hidden="true"></span>
+<header class="links-head">
+    <h1 class="page-title" itemprop="name headline"><?php echo htmlspecialchars((string)$this->title, ENT_QUOTES, 'UTF-8'); ?></h1>
+    <?php if ($friendCount > 0): ?><span class="links-total"><?php echo sprintf(_t('%d 位'), $friendCount); ?></span><?php endif; ?>
 </header>
-<div class="post-content">
+<div class="post-content links-body">
 <?php if ($this->options->linksShow === 'off'): ?>
     <p class="links-empty">友链暂未开放。</p>
 <?php elseif (empty($friends)): ?>
     <p class="links-empty">还没有友链，去后台「设置外观」添加吧。</p>
 <?php else: ?>
-    <ul class="links-grid">
-        <?php foreach ($friends as $i => $friend): ?>
-        <li class="link-card">
-            <a href="<?php echo htmlspecialchars($friend['url'], ENT_QUOTES); ?>" target="_blank" rel="noopener">
-                <?php if ($friend['avatar'] !== ''): ?>
-                <img class="link-avatar-img" src="<?php echo htmlspecialchars($friend['avatar'], ENT_QUOTES); ?>" alt="<?php echo htmlspecialchars($friend['name'], ENT_QUOTES); ?>" width="38" height="38" loading="lazy" decoding="async"/>
-                <?php else: ?>
-                <span class="link-avatar link-color-<?php echo $i % 5; ?>"><?php echo htmlspecialchars(mb_substr($friend['name'], 0, 1, 'UTF-8')); ?></span>
-                <?php endif; ?>
-                <span class="link-info">
-                    <span class="link-name"><?php echo htmlspecialchars($friend['name']); ?></span>
-                    <span class="link-host"><?php echo htmlspecialchars($friend['desc']); ?></span>
-                </span>
-                <i class="ri-external-link-line link-external"></i>
-            </a>
-        </li>
+    <div class="links-list">
+        <?php foreach ($friends as $friend): ?>
+        <a class="links-row" href="<?php echo htmlspecialchars($friend['url'], ENT_QUOTES); ?>" target="_blank" rel="noopener">
+            <span class="links-name"><?php echo htmlspecialchars($friend['name']); ?></span>
+            <span class="links-desc"><?php echo htmlspecialchars($friend['desc']); ?></span>
+            <span class="links-host"><?php echo htmlspecialchars($friend['host']); ?></span>
+        </a>
         <?php endforeach; ?>
-    </ul>
+    </div>
     <p class="links-note">欢迎交换友链 · 可通过右上角的联系方式找到我</p>
 <?php endif; ?>
 </div>

@@ -7,7 +7,7 @@
         <?php while ($pages->next()): ?>
             <?php if ($this->options->linksShow === 'off' && $pages->template === 'links.php') { continue; } ?>
             <?php $isCurrentPage = $this->is('page', $pages->slug); ?>
-            <li<?php if ($isCurrentPage): ?> class="active"<?php endif; ?>><a href="<?php $pages->permalink(); ?>"<?php if ($isCurrentPage): ?> aria-current="page"<?php endif; ?>><?php $pages->title(); ?></a></li>
+            <li<?php if ($isCurrentPage): ?> class="active"<?php endif; ?>><a href="<?php $pages->permalink(); ?>"<?php if ($isCurrentPage): ?> aria-current="page"<?php endif; ?>><?php echo htmlspecialchars((string)$pages->title, ENT_QUOTES, 'UTF-8'); ?></a></li>
         <?php endwhile; ?>
     </ul>
 </nav>

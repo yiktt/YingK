@@ -1,5 +1,6 @@
 <?php if (!defined('__TYPECHO_ROOT_DIR__')) exit;
 $bgUrl = $this->options->bgUrl ? $this->options->bgUrl : $this->options->themeUrl . '/img/bg-default.jpg';
+$hasCustomBg = trim((string)$this->options->bgUrl) !== '';
 $bgCss = yingCssUrl($bgUrl);
 $fontUrls = yingFontUrls($this->options);
 $hasWebFont = !empty($fontUrls);
@@ -7,11 +8,16 @@ $fontSrc = implode(', ', array_map(function ($url) {
     return "url('" . yingCssUrl($url) . "')";
 }, $fontUrls));
 $readingFont = yingFontStack($hasWebFont);
-$logoUrl = trim((string)$this->options->logoUrl);
-if ($logoUrl === '') {
-    $logoUrl = $this->options->themeUrl . '/avatar.png';
+$logoRaw = trim((string)$this->options->logoUrl);
+if (!yingUrlIsSafe($logoRaw)) {
+    $logoRaw = $this->options->themeUrl . '/avatar.png';
 }
-$logoUrl = htmlspecialchars($logoUrl, ENT_QUOTES);
+$logoUrl = htmlspecialchars($logoRaw, ENT_QUOTES);
+$faviconRaw = trim((string)$this->options->faviconUrl);
+if (!yingUrlIsSafe($faviconRaw)) {
+    $faviconRaw = $logoRaw;
+}
+$faviconUrl = htmlspecialchars($faviconRaw, ENT_QUOTES);
 $siteTitle = htmlspecialchars((string)$this->options->title, ENT_QUOTES);
 $alphaRaw = trim((string)$this->options->cardAlpha);
 $alphaVal = is_numeric($alphaRaw) && $alphaRaw !== '' ? floatval($alphaRaw) : 75;
@@ -19,6 +25,22 @@ if ($alphaVal > 1) {
     $alphaVal = $alphaVal / 100;
 }
 $cardAlpha = max(0.05, min(1, round($alphaVal, 2)));
+
+// 字体 CDN 预连接
+$preconnects = [];
+$fontSource = yingFontSource($this->options);
+if ($fontSource === 'cdn' || $fontSource === 'harmony') {
+    $preconnects[] = 'https://cdn.jsdelivr.net';
+    $preconnects[] = 'https://fastly.jsdelivr.net';
+} elseif ($fontSource === 'custom') {
+    $fontUrlRaw = trim((string)$this->options->fontUrl);
+    $fontHost = parse_url($fontUrlRaw, PHP_URL_HOST);
+    $fontScheme = parse_url($fontUrlRaw, PHP_URL_SCHEME);
+    if (is_string($fontHost) && $fontHost !== '' && is_string($fontScheme)
+        && in_array(strtolower($fontScheme), ['http', 'https'], true)) {
+        $preconnects[] = strtolower($fontScheme) . '://' . $fontHost;
+    }
+}
 
 // 联系方式：优先 JSON，空时回退旧字段
 $contacts = [];
@@ -82,6 +104,19 @@ foreach ($contactsList as $c) {
 
 // 一言 API 模式参数
 $yiyanCats = implode(',', (array)$this->options->yiyanCats);
+
+// 一言位置：可移到联系方式图标下方；没有联系方式时仍显示在头像下方
+$yiyanAside = $this->options->yiyanPosition === 'contacts' && !empty($contacts);
+$yiyanHtml = '';
+if ($this->options->yiyanSource === 'api') {
+    $yiyanHtml = '<h2><span id="yiyan-text" class="is-loading" data-cats="'
+        . htmlspecialchars($yiyanCats, ENT_QUOTES)
+        . '" data-from="' . ($this->options->yiyanShowFrom === 'on' ? '1' : '0')
+        . '" data-fallback="' . htmlspecialchars((string)$this->options->yiyan, ENT_QUOTES)
+        . '">…</span></h2>';
+} else {
+    $yiyanHtml = '<h2><span>' . htmlspecialchars((string)$this->options->yiyan, ENT_QUOTES) . '</span></h2>';
+}
 ?>
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -89,15 +124,29 @@ $yiyanCats = implode(',', (array)$this->options->yiyanCats);
     <meta charset="<?php $this->options->charset(); ?>">
     <meta name="renderer" content="webkit">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?php $this->archiveTitle([
-            'category' => _t('分类 %s 下的文章'),
-            'search'   => _t('包含关键字 %s 的文章'),
-            'tag'      => _t('标签 %s 下的文章'),
-            'author'   => _t('%s 发布的文章')
-        ], '', ' - '); ?><?php echo $siteTitle; ?></title>
+    <link rel="icon" href="<?php echo $faviconUrl; ?>">
+    <?php foreach ($preconnects as $preconnectHost): ?>
+    <link rel="preconnect" href="<?php echo htmlspecialchars($preconnectHost, ENT_QUOTES, 'UTF-8'); ?>" crossorigin>
+    <?php endforeach; ?>
+    <title><?php
+        $titlePrefix = '';
+        $titleArchive = $this->getArchiveTitle();
+        if (!empty($titleArchive)) {
+            $titleDefines = [
+                'category' => _t('分类 %s 下的文章'),
+                'search'   => _t('包含关键字 %s 的文章'),
+                'tag'      => _t('标签 %s 下的文章'),
+                'author'   => _t('%s 发布的文章')
+            ];
+            $titleDefine = isset($titleDefines[$this->getArchiveType()]) ? $titleDefines[$this->getArchiveType()] : '%s';
+            $titlePrefix = sprintf($titleDefine, $titleArchive) . ' - ';
+        }
+        echo htmlspecialchars($titlePrefix . $siteTitle, ENT_QUOTES, 'UTF-8');
+    ?></title>
 
     <script>
     (function () {
+        document.documentElement.classList.add('js');
         var saved = null;
         try {
             saved = localStorage.getItem('ying-theme');
@@ -109,8 +158,8 @@ $yiyanCats = implode(',', (array)$this->options->yiyanCats);
     </script>
 
     <link rel="stylesheet" href="<?php $this->options->themeUrl('css/normalize.min.css'); ?>">
-    <link rel="stylesheet" href="<?php $this->options->themeUrl('css/main.css'); ?>">
-    <link rel="stylesheet" href="<?php $this->options->themeUrl('css/remixicon.min.css'); ?>">
+    <link rel="stylesheet" href="<?php $this->options->themeUrl('css/main.css'); ?>?v=<?php echo (int)filemtime(__DIR__ . '/css/main.css'); ?>">
+    <link rel="stylesheet" href="<?php $this->options->themeUrl('css/remixicon.min.css'); ?>?v=<?php echo (int)filemtime(__DIR__ . '/css/remixicon.min.css'); ?>">
     <style>
     <?php if ($hasWebFont): ?>
     @font-face {
@@ -123,14 +172,31 @@ $yiyanCats = implode(',', (array)$this->options->yiyanCats);
     <?php endif; ?>
     :root { --reading-font: <?php echo $readingFont; ?>; --page-bg: url('<?php echo $bgCss; ?>'); --card-alpha: <?php echo $cardAlpha; ?>; }
     </style>
-    <?php $this->header('generator=&wlw='); ?>
+    <?php $this->header('generator=&wlw=&rss2=&rss1=&atom='); ?>
+    <?php
+    $feedTitle = (!empty($titleArchive) ? $titleArchive . ' &raquo; ' : '') . $siteTitle;
+    ?>
+    <link rel="alternate" type="application/rss+xml" title="<?php echo htmlspecialchars($feedTitle . ' &raquo; RSS 2.0', ENT_QUOTES, 'UTF-8'); ?>" href="<?php echo htmlspecialchars($this->getArchiveFeedUrl(), ENT_QUOTES, 'UTF-8'); ?>">
+    <link rel="alternate" type="application/rdf+xml" title="<?php echo htmlspecialchars($feedTitle . ' &raquo; RSS 1.0', ENT_QUOTES, 'UTF-8'); ?>" href="<?php echo htmlspecialchars($this->getArchiveFeedRssUrl(), ENT_QUOTES, 'UTF-8'); ?>">
+    <link rel="alternate" type="application/atom+xml" title="<?php echo htmlspecialchars($feedTitle . ' &raquo; ATOM 1.0', ENT_QUOTES, 'UTF-8'); ?>" href="<?php echo htmlspecialchars($this->getArchiveFeedAtomUrl(), ENT_QUOTES, 'UTF-8'); ?>">
 </head>
-<body<?php if ($this->is('post')): ?> class="is-post"<?php endif; ?>>
+<body<?php $bodyClasses = [];
+    if ($this->is('post')) {
+        $bodyClasses[] = 'is-post';
+    }
+    if ($hasCustomBg) {
+        $bodyClasses[] = 'has-custom-bg';
+    }
+    if ($bodyClasses): ?> class="<?php echo implode(' ', $bodyClasses); ?>"<?php endif; ?>>
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
     <div class="main">
         <div class="container">
-            <div class="header">
+            <div class="header<?php if ($yiyanAside): ?> header-yiyan-aside<?php endif; ?>">
                 <div class="header-top">
-                <img src="<?php echo $logoUrl; ?>" width="72" height="72" alt="<?php echo $siteTitle; ?>"/>
+                <img class="site-avatar" src="<?php echo $logoUrl; ?>" width="72" height="72" alt="<?php echo $siteTitle; ?>"/>
+                <?php if ($yiyanAside): ?>
+                <div class="header-aside">
+                <?php endif; ?>
                 <?php if ($contacts): ?>
                     <nav class="nav contacts" aria-label="联系方式">
                         <ul class="flat">
@@ -140,13 +206,14 @@ $yiyanCats = implode(',', (array)$this->options->yiyanCats);
                         </ul>
                     </nav>
                 <?php endif; ?>
+                <?php if ($yiyanAside): ?>
+                    <div class="site-description site-description-aside"><?php echo $yiyanHtml; ?></div>
                 </div>
-                <div class="site-description">
-                    <?php if ($this->options->yiyanSource === 'api'): ?>
-                    <h2><span id="yiyan-text" class="is-loading" data-cats="<?php echo htmlspecialchars($yiyanCats, ENT_QUOTES); ?>" data-from="<?php echo $this->options->yiyanShowFrom === 'on' ? '1' : '0'; ?>" data-fallback="<?php echo htmlspecialchars((string)$this->options->yiyan, ENT_QUOTES); ?>">…</span></h2>
-                    <?php else: ?>
-                    <h2><span><?php echo htmlspecialchars((string)$this->options->yiyan, ENT_QUOTES); ?></span></h2>
-                    <?php endif; ?>
+                <?php endif; ?>
                 </div>
+                <?php if (!$yiyanAside): ?>
+                <div class="site-description"><?php echo $yiyanHtml; ?></div>
+                <?php endif; ?>
                 <?php $this->need('nav.php'); ?>
             </div>
+            <main id="main-content" tabindex="-1">

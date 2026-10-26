@@ -281,6 +281,62 @@ function yingFontStack(bool $hasWebFont): string
     return "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Helvetica Neue', Arial, sans-serif";
 }
 
+function yingNewPostDays(int $created): int
+{
+    $today = strtotime(date('Y-m-d'));
+    $day = strtotime(date('Y-m-d', $created));
+    return (int)round(($today - $day) / 86400);
+}
+
+/**
+ * 关于页统计：已发布文章数、总字数、运行天数
+ * 建站日期取后台设置，未设置时回退到最早一篇文章的日期
+ */
+function yingSiteStats(): array
+{
+    $options = \Widget\Options::alloc();
+    $db = \Typecho\Db::get();
+    $rows = $db->fetchAll($db->select('created', 'text')->from('table.contents')
+        ->where('status = ?', 'publish')
+        ->where('created < ?', (int)$options->time)
+        ->where('type = ?', 'post'));
+
+    $posts = count($rows);
+    $words = 0;
+    $earliest = null;
+    foreach ($rows as $row) {
+        $words += yingWordCount((string)$row['text']);
+        $created = (int)$row['created'];
+        if ($earliest === null || $created < $earliest) {
+            $earliest = $created;
+        }
+    }
+
+    $start = trim((string)$options->siteStartDate);
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $start) || !strtotime($start)) {
+        $start = $earliest !== null ? date('Y-m-d', $earliest) : '';
+    }
+
+    $days = null;
+    if ($start !== '') {
+        $days = max(0, (int)round((strtotime(date('Y-m-d')) - strtotime($start)) / 86400)) + 1;
+    }
+
+    return ['posts' => $posts, 'words' => $words, 'days' => $days, 'start' => $start];
+}
+
+function yingUptimeText(int $days): string
+{
+    if ($days < 365) {
+        return sprintf(_t('%d 天'), $days);
+    }
+    $years = intdiv($days, 365);
+    $rest = $days % 365;
+    return $rest > 0
+        ? sprintf(_t('%d 年 %d 天'), $years, $rest)
+        : sprintf(_t('%d 年'), $years);
+}
+
 function yingFontSourceOptions(): array
 {
     return [
@@ -412,13 +468,10 @@ function yingBumpViews(int $cid): void
     }
     try {
         $db = \Typecho\Db::get();
-        $row = $db->fetchRow($db->select('int_value')->from('table.fields')
+        $affected = $db->query($db->update('table.fields')
+            ->expression('int_value', 'int_value + 1')
             ->where('cid = ?', $cid)->where('name = ?', 'views'));
-        if ($row) {
-            $db->query($db->update('table.fields')
-                ->rows(['int_value' => intval($row['int_value']) + 1])
-                ->where('cid = ?', $cid)->where('name = ?', 'views'));
-        } else {
+        if ($affected === 0) {
             $db->query($db->insert('table.fields')
                 ->rows(['cid' => $cid, 'name' => 'views', 'type' => 'int', 'int_value' => 1]));
         }
@@ -476,6 +529,23 @@ function yingWordCount(string $html): int
 {
     $text = trim(preg_replace('/\s+/u', '', strip_tags($html)));
     return mb_strlen($text, 'UTF-8');
+}
+
+/**
+ * 为正文 <img> 补 loading="lazy" 与 decoding="async"，已声明 loading 的不动
+ */
+function yingContentHtml(string $html): string
+{
+    return preg_replace_callback('/<img\b([^>]*)>/i', function (array $m): string {
+        $attrs = rtrim($m[1]);
+        if (preg_match('/\bloading\s*=/i', $attrs)) {
+            return $m[0];
+        }
+        if (substr($attrs, -1) === '/') {
+            $attrs = rtrim(substr($attrs, 0, -1));
+        }
+        return '<img' . $attrs . ' loading="lazy" decoding="async">';
+    }, $html) ?? $html;
 }
 
 /**
@@ -849,6 +919,15 @@ function themeConfig($form)
     );
     $form->addInput($logoUrl->addRule('url', _t('请填写一个合法的 URL 地址')));
 
+    $faviconUrl = new \Typecho\Widget\Helper\Form\Element\Text(
+        'faviconUrl',
+        null,
+        null,
+        _t('标签页图标'),
+        _t('填入浏览器标签页图标（favicon）的 URL 地址，留空使用上方头像。')
+    );
+    $form->addInput($faviconUrl->addRule('url', _t('请填写一个合法的 URL 地址')));
+
     $yiyanSource = new \Typecho\Widget\Helper\Form\Element\Radio(
         'yiyanSource',
         ['fixed' => _t('固定内容'), 'api' => _t('从一言 API 自动获取')],
@@ -856,6 +935,15 @@ function themeConfig($form)
         _t('一言来源')
     );
     $form->addInput($yiyanSource->multiMode());
+
+    $yiyanPosition = new \Typecho\Widget\Helper\Form\Element\Radio(
+        'yiyanPosition',
+        ['avatar' => _t('头像下方'), 'contacts' => _t('联系方式下方')],
+        'avatar',
+        _t('一言位置'),
+        _t('一言显示在头像下方（默认），或移到联系方式图标下方；没有联系方式时仍显示在头像下方。')
+    );
+    $form->addInput($yiyanPosition->multiMode());
 
     $yiyan = new \Typecho\Widget\Helper\Form\Element\Textarea(
         'yiyan',
@@ -1102,6 +1190,29 @@ function themeConfig($form)
     );
     $form->addInput($cardAlpha);
 
+    $newPostMark = new \Typecho\Widget\Helper\Form\Element\Radio(
+        'newPostMark',
+        [
+            'none' => _t('不标记'),
+            'stamp' => _t('朱砂小印「新」'),
+            'relative' => _t('相对时间（今天/昨天/N 天前）'),
+            'both' => _t('小印 + 相对时间'),
+        ],
+        'none',
+        _t('新文章标记'),
+        _t('首页与列表页中，对 3 个自然日内发布的文章显示标记；默认不标记。')
+    );
+    $form->addInput($newPostMark->multiMode());
+
+    $siteStartDate = new \Typecho\Widget\Helper\Form\Element\Text(
+        'siteStartDate',
+        null,
+        null,
+        _t('建站日期'),
+        _t('关于页「运行」统计的起始日期，格式 YYYY-MM-DD（例如 2024-05-01）；留空则使用最早一篇文章的日期。')
+    );
+    $form->addInput($siteStartDate);
+
     $linksShow = new \Typecho\Widget\Helper\Form\Element\Radio(
         'linksShow',
         ['on' => _t('显示友链页'), 'off' => _t('隐藏友链页')],
@@ -1164,6 +1275,18 @@ function themeConfigHandle(array $settings, bool $isInit): bool
 
     unset($settings['fontFile'], $settings['fontRemove'], $settings['yingAdminSkin']);
     $settings['fontUrl'] = trim((string)($settings['fontUrl'] ?? ''));
+
+    $startDate = trim((string)($settings['siteStartDate'] ?? ''));
+    if ($startDate !== '') {
+        $parts = explode('-', $startDate);
+        $valid = count($parts) === 3
+            && preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)
+            && checkdate((int)$parts[1], (int)$parts[2], (int)$parts[0]);
+        if (!$valid) {
+            $startDate = '';
+        }
+    }
+    $settings['siteStartDate'] = $startDate;
 
     if ($isInit) {
         $settings['fontSource'] = 'cdn';

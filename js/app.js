@@ -39,6 +39,26 @@ document.addEventListener('DOMContentLoaded', function () {
         syncToggle();
     }
 
+    // ===== 头像首次加载：图片就绪后再淡入（样式见 main.css 的 site-avatar） =====
+    var siteAvatar = document.querySelector('.header-top > img.site-avatar');
+    if (siteAvatar) {
+        var revealAvatar = function () {
+            var apply = function () { siteAvatar.classList.add('is-avatar-in'); };
+            if (window.requestAnimationFrame) {
+                requestAnimationFrame(function () { requestAnimationFrame(apply); });
+            } else {
+                apply();
+            }
+        };
+        if (siteAvatar.complete && siteAvatar.naturalWidth > 0) {
+            revealAvatar();
+        } else {
+            siteAvatar.addEventListener('load', revealAvatar, {once: true});
+            siteAvatar.addEventListener('error', revealAvatar, {once: true});
+            setTimeout(revealAvatar, 3000);
+        }
+    }
+
     // ===== 一言 API：按后台配置获取随机句子（淡入过渡，失败回退固定内容） =====
     var yiyanEl = document.getElementById('yiyan-text');
     if (yiyanEl && yiyanEl.dataset.cats !== undefined) {

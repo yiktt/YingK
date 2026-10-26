@@ -28,38 +28,43 @@ while ($recent->next()) {
     $groups[$key]['posts'][] = [
         'title' => $recent->title,
         'permalink' => $recent->permalink,
-        'day' => date('m月d日', $localTime),
+        'day' => date('m.d', $localTime),
     ];
+}
+$total = 0;
+foreach ($groups as $group) {
+    $total += $group['count'];
 }
 ?>
 
-<h1 class="post-title" itemprop="name headline">
-    <?php $this->title(); ?>
-</h1>
-<div class="post-content" itemprop="articleBody">
+<div class="archive-head">
+    <h1 class="post-title" itemprop="name headline"><?php echo htmlspecialchars((string)$this->title, ENT_QUOTES, 'UTF-8'); ?></h1>
+    <?php if ($total > 0): ?><span class="archive-total"><?php echo sprintf(_t('共 %d 篇'), $total); ?></span><?php endif; ?>
+</div>
+<div class="post-content archive-body" itemprop="articleBody">
     <?php if (empty($groups)): ?>
     <p class="list-empty">暂无文章。</p>
     <?php else: ?>
-    <ul class="archives">
+    <div class="archive-tree">
+        <?php $firstGroup = true; ?>
         <?php foreach ($groups as $group): ?>
-        <li class="archives-item">
-            <div class="archives-item-content">
-                <h3 class="archives-item-title">
-                    <a href="<?php echo htmlspecialchars($group['url'], ENT_QUOTES); ?>"><?php echo htmlspecialchars($group['label']); ?></a>
-                    <span class="archives-count"><?php echo intval($group['count']); ?> 篇</span>
-                </h3>
-                <ul class="archives-list">
-                    <?php foreach ($group['posts'] as $post): ?>
-                    <li class="archives-entry">
-                        <span class="archives-time"><?php echo htmlspecialchars($post['day']); ?></span>
-                        <a class="archives-link" href="<?php echo htmlspecialchars($post['permalink'], ENT_QUOTES); ?>"><?php echo htmlspecialchars($post['title']); ?></a>
-                    </li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-        </li>
+        <section class="archive-node<?php if ($firstGroup): ?> is-current<?php endif; ?>">
+            <h3 class="archive-month">
+                <a href="<?php echo htmlspecialchars($group['url'], ENT_QUOTES); ?>"><?php echo htmlspecialchars($group['label']); ?></a>
+                <span class="archive-count"><?php echo intval($group['count']); ?> 篇</span>
+            </h3>
+            <ul class="archive-list">
+                <?php foreach ($group['posts'] as $post): ?>
+                <li class="archive-entry">
+                    <a class="archive-link" href="<?php echo htmlspecialchars($post['permalink'], ENT_QUOTES); ?>"><?php echo htmlspecialchars($post['title']); ?></a>
+                    <span class="archive-day"><?php echo htmlspecialchars($post['day']); ?></span>
+                </li>
+                <?php endforeach; ?>
+            </ul>
+        </section>
+        <?php $firstGroup = false; ?>
         <?php endforeach; ?>
-    </ul>
+    </div>
     <?php endif; ?>
 </div>
 <?php $this->need('footer.php'); ?>
