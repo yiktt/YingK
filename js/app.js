@@ -280,7 +280,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (history.length > 1) {
             history.back();
         } else {
-            var home = document.querySelector('.nf-btn-solid');
+            var home = document.querySelector('#nf-home');
             location.href = home ? home.href : '/';
         }
     });
