@@ -206,6 +206,7 @@ if ($this->options->yiyanSource === 'api') {
                         </ul>
                     </nav>
                 <?php endif; ?>
+                <button type="button" id="menu-hamburger" class="menu-hamburger<?php if (!$contacts): ?> menu-hamburger-solo<?php endif; ?>" aria-label="打开菜单" aria-expanded="false" aria-controls="top-menu"><i class="ri-menu-line"></i></button>
                 <?php if ($yiyanAside): ?>
                     <div class="site-description site-description-aside"><?php echo $yiyanHtml; ?></div>
                 </div>

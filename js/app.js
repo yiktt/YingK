@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
-    // ===== 顶部工具坞：展开 / 收起（默认展开） =====
+    // ===== 顶部工具坞：桌面收起 / 展开（移动端不显示此把手） =====
     var menuHandle = document.getElementById('menu-handle');
     var menuItems = document.getElementById('top-menu-items');
 
@@ -116,6 +116,64 @@ document.addEventListener('DOMContentLoaded', function () {
                 icon.className = open ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line';
             }
         });
+    }
+
+    // ===== 移动端汉堡菜单（联系方式行末尾，默认收起，展开后工具坞定位到按钮下方） =====
+    var menuHamburger = document.getElementById('menu-hamburger');
+    var topMenuEl = document.getElementById('top-menu');
+
+    function positionMenu() {
+        if (!menuHamburger || !topMenuEl) {
+            return;
+        }
+        var rect = menuHamburger.getBoundingClientRect();
+        topMenuEl.style.top = (rect.bottom + 8) + 'px';
+        topMenuEl.style.right = (window.innerWidth - rect.right) + 'px';
+    }
+
+    function setHamburgerMenu(open) {
+        if (!menuHamburger || !topMenuEl) {
+            return;
+        }
+        topMenuEl.classList.toggle('menu-open', open);
+        menuHamburger.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (open) {
+            positionMenu();
+        }
+    }
+
+    if (menuHamburger && topMenuEl) {
+        menuHamburger.addEventListener('click', function () {
+            setHamburgerMenu(!topMenuEl.classList.contains('menu-open'));
+        });
+        window.addEventListener('resize', function () {
+            if (topMenuEl.classList.contains('menu-open')) {
+                positionMenu();
+            }
+        }, {passive: true});
+        document.addEventListener('click', function (e) {
+            if (getComputedStyle(menuHamburger).display === 'none') {
+                return;
+            }
+            if (topMenuEl.classList.contains('menu-open')
+                && !topMenuEl.contains(e.target)
+                && !menuHamburger.contains(e.target)) {
+                setHamburgerMenu(false);
+            }
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && topMenuEl.classList.contains('menu-open')) {
+                setHamburgerMenu(false);
+            }
+        });
+        var themeToggleBtn = document.getElementById('theme-toggle');
+        if (themeToggleBtn) {
+            themeToggleBtn.addEventListener('click', function () {
+                if (getComputedStyle(menuHamburger).display !== 'none') {
+                    setHamburgerMenu(false);
+                }
+            });
+        }
     }
 
     // ===== 搜索面板 =====
@@ -489,7 +547,7 @@ document.addEventListener('DOMContentLoaded', function () {
         highlightCode();
     }
 
-    function navigate(href, push) {
+    function navigate(href, push, options) {
         if (navLock) {
             location.href = href;
             return;
@@ -500,14 +558,26 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         var scrollToY = push ? 0 : getScrollState();
         setNavigating(true);
-        fetch(href, {credentials: 'same-origin'})
+        var init = {credentials: 'same-origin'};
+        if (options && options.method === 'POST') {
+            init.method = 'POST';
+            init.body = options.body;
+            if (options.headers) {
+                init.headers = options.headers;
+            }
+        }
+        fetch(href, init)
             .then(function (r) {
                 if (!r.ok) {
                     throw new Error('HTTP ' + r.status);
                 }
-                return r.text();
+                return r.text().then(function (html) {
+                    return {html: html, finalUrl: r.url};
+                });
             })
-            .then(function (html) {
+            .then(function (res) {
+                var html = res.html;
+                var finalHref = res.finalUrl || href;
                 var doc = new DOMParser().parseFromString(html, 'text/html');
                 if (!doc.querySelector('.container') || !doc.querySelector('.header')) {
                     throw new Error('not a theme page');
@@ -515,9 +585,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (doc.querySelector('.container script')) {
                     throw new Error('page contains script');
                 }
-                swapPage(doc, href);
+                swapPage(doc, finalHref);
                 if (push) {
-                    history.pushState({yingScroll: 0}, '', href);
+                    history.pushState({yingScroll: 0}, '', finalHref);
                     try {
                         sessionStorage.setItem('yingBackable', '1');
                     } catch (e) {}
@@ -536,6 +606,25 @@ document.addEventListener('DOMContentLoaded', function () {
                 setNavigating(false);
                 navLock = false;
             });
+    }
+
+    // 搜索面板：拦截提交，局部加载搜索结果页（与点击页面链接一致）
+    var searchForm = document.getElementById('search-panel');
+    if (searchForm) {
+        searchForm.addEventListener('submit', function (e) {
+            var input = searchForm.querySelector('input[name="s"]');
+            var kw = input ? input.value.replace(/^\s+|\s+$/g, '') : '';
+            if (!kw) {
+                return;
+            }
+            e.preventDefault();
+            setHamburgerMenu(false);
+            navigate(searchForm.getAttribute('action') || location.href, true, {
+                method: 'POST',
+                body: new URLSearchParams({s: kw}).toString(),
+                headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'}
+            });
+        });
     }
 
     // 拦截站内链接点击

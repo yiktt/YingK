@@ -618,6 +618,16 @@ ul {
     justify-content: space-between;
 }
 
+/* 一言（头像行下方模式）：与头像行底边、导航分隔线之间的上下留白一致
+   （上下各 6px，保持对称；联系方式下方模式不适用） */
+.header .site-description:not(.site-description-aside) {
+    margin-top: 6px;
+}
+
+.header .site-description:not(.site-description-aside) h2 {
+    margin-bottom: 6px;
+}
+
 /* 夜间/白天切换按钮样式已并入 .float-btn */
 
 .section .section-header {
@@ -845,16 +855,39 @@ ul {
         row-gap: 12px;
     }
 
+    /* 联系方式移到页头最右（与桌面一致） */
     .nav.contacts {
-        width: 100%;
+        width: auto;
+        flex: 0 0 auto;
+        margin-left: auto;
     }
 
     .nav.contacts ul.flat {
-        justify-content: flex-start;
+        justify-content: flex-end;
     }
 
-    .header h2 {
-        display: none;
+    /* 一言（联系方式下方模式）在移动端换行独占一行、左对齐 */
+    .site-description-aside {
+        flex-basis: 100%;
+    }
+
+    .header-aside .site-description {
+        text-align: left;
+    }
+
+    /* 上下留白与头像行下方模式一致（各 6px）：上方抵消 row-gap 12px 的一半，
+       下方覆盖 .header-yiyan-aside .header-top 的 18px */
+    .site-description-aside {
+        margin-top: -6px;
+    }
+
+    .header-yiyan-aside .header-top {
+        margin-bottom: 6px;
+    }
+
+    /* 移动端一言文字稍小 */
+    .header .site-description h2 {
+        font-size: 0.875rem;
     }
 
     .container {
@@ -1117,13 +1150,79 @@ a.top-menu-btn:hover {
     object-fit: contain;
 }
 
+/* 汉堡菜单按钮：仅移动端显示（≤880px），放在联系方式图标之后 */
+.menu-hamburger {
+    display: none;
+}
+
 /* 悬浮按钮组：移动端适配（须置于桌面规则之后） */
 
 @media (max-width: 880px) {
+    /* 移动端工具坞：默认收起，由联系方式行末尾的汉堡按钮展开；
+       展开后为竖排玻璃胶囊，具体位置由 JS 按按钮位置定位 */
     .top-menu {
         left: auto;
         right: 14px;
-        top: 14px;
+        top: 12px;
+        flex-direction: column;
+        gap: 2px;
+        padding: 3px;
+        border-radius: 999px;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-6px);
+        pointer-events: none;
+        transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
+    }
+
+    .top-menu.menu-open {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+
+    .top-menu-btn {
+        width: 44px;
+        height: 44px;
+    }
+
+    .menu-handle {
+        display: none;
+    }
+
+    .top-menu-items,
+    .top-menu-items:not(.open) {
+        flex-direction: column;
+        max-height: none;
+        opacity: 1;
+    }
+
+    .menu-hamburger {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        align-self: center;
+        width: 44px;
+        height: 44px;
+        margin-left: 12px;
+        border: 0;
+        border-radius: 10px;
+        padding: 0;
+        background: none;
+        color: var(--link-muted);
+        font-size: 20px;
+        cursor: pointer;
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .menu-hamburger:hover {
+        background: var(--float-bg-hover);
+        color: var(--link-hover);
+    }
+
+    .menu-hamburger-solo {
+        margin-left: auto;
     }
 
     .back-float {
@@ -1149,15 +1248,6 @@ a.top-menu-btn:hover {
     .scroll-btn.show {
         height: 44px;
         margin-top: 8px;
-    }
-
-    .top-menu-btn {
-        width: 44px;
-        height: 44px;
-    }
-
-    .top-menu-items {
-        max-height: 220px;
     }
 
     .back-float {
