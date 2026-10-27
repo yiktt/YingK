@@ -4,7 +4,7 @@
                  <nav class="nav" aria-label="页脚信息">
                 <?php $copyrightText = trim((string)$this->options->copyright); ?>
                 <?php if ($copyrightText !== ''): ?>
-                 <?php echo htmlspecialchars(str_replace('{Y}', date('Y'), $copyrightText), ENT_QUOTES); ?><?php if ($this->options->footerbeian || $this->options->policebeian): ?><br/><?php endif; ?>
+                 <?php echo htmlspecialchars(str_replace('{Y}', date('Y', time() + (int)$this->options->timezone - (int)$this->options->serverTimezone), $copyrightText), ENT_QUOTES); ?><?php if ($this->options->footerbeian || $this->options->policebeian): ?><br/><?php endif; ?>
                 <?php endif; ?>
                 <?php if ($this->options->footerbeian): ?>
                 <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener"><span><?php echo htmlspecialchars((string)$this->options->footerbeian, ENT_QUOTES); ?></span></a><?php if ($this->options->policebeian): ?><br/><?php endif; ?>

@@ -559,13 +559,13 @@ ul {
     margin-bottom: 18px;
 }
 
-@media (max-width: 767px) {
+/* 平板区（≤880，汉堡工具坞启用）起页面头部同移动端布局 */
+@media (max-width: 880px) {
     .header-aside {
         display: contents;
     }
 }
 
-.header h1,
 .header h2 {
     margin: 0;
     padding: 0;
@@ -772,53 +772,6 @@ ul {
     margin-top: 20px;
 }
 
-.highlight {
-    background: var(--code-bg);
-    border: 3px solid var(--code-border);
-}
-
-.highlight pre,
-.highlight code,
-.highlight kbd,
-.highlight samp {
-    font-weight: normal;
-    background-color: inherit;
-    white-space: pre;
-    color: var(--code-text);
-}
-
-.highlight pre {
-    margin-bottom: 0;
-    margin-top: 0;
-    padding: 10px;
-    overflow: auto;
-}
-
-.highlight pre code {
-    padding: 0;
-}
-
-.highlight pre::-webkit-scrollbar {
-    height: 10px;
-}
-
-.highlight pre::-webkit-scrollbar-button {
-    display: none;
-}
-
-.highlight pre::-webkit-scrollbar-thumb {
-    min-height: 16px;
-    background-color: var(--scrollbar-thumb);
-    background-clip: padding-box;
-    border: 3px solid var(--scrollbar-track);
-    border-radius: 5px;
-}
-
-.highlight pre::-webkit-scrollbar-thumb:active {
-    background-color: var(--faint);
-    border-width: 2px;
-  }
-
 @media (max-width: 767px) {
     h1 {
         font-size: 1.375rem;
@@ -850,52 +803,8 @@ ul {
         padding-top: 64px;
     }
 
-    .header-top {
-        flex-wrap: wrap;
-        row-gap: 12px;
-    }
-
-    /* 联系方式移到页头最右（与桌面一致） */
-    .nav.contacts {
-        width: auto;
-        flex: 0 0 auto;
-        margin-left: auto;
-    }
-
-    .nav.contacts ul.flat {
-        justify-content: flex-end;
-    }
-
-    /* 一言（联系方式下方模式）在移动端换行独占一行、左对齐 */
-    .site-description-aside {
-        flex-basis: 100%;
-    }
-
-    .header-aside .site-description {
-        text-align: left;
-    }
-
-    /* 上下留白与头像行下方模式一致（各 6px）：上方抵消 row-gap 12px 的一半，
-       下方覆盖 .header-yiyan-aside .header-top 的 18px */
-    .site-description-aside {
-        margin-top: -6px;
-    }
-
-    .header-yiyan-aside .header-top {
-        margin-bottom: 6px;
-    }
-
-    /* 移动端一言文字稍小 */
-    .header .site-description h2 {
-        font-size: 0.875rem;
-    }
-
     .container {
         margin-top: 10px;
-    }
-
-    .highlight pre::-webkit-scrollbar {
-        display: none;
     }
 }
 
@@ -938,6 +847,8 @@ ul {
 /* 键盘焦点可见性 */
 .float-btn:focus-visible,
 .top-menu-btn:focus-visible,
+.menu-hamburger:focus-visible,
+.nf-btn:focus-visible,
 .search-panel input:focus-visible,
 .code-copy:focus-visible {
     outline: 2px solid var(--link-muted);
@@ -1114,12 +1025,6 @@ a.top-menu-btn:hover {
     }
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .back-float .float-btn {
-        animation: none;
-    }
-}
-
 /* 头部联系方式图标 */
 .nav.contacts ul.flat {
     display: flex;
@@ -1225,6 +1130,47 @@ a.top-menu-btn:hover {
         margin-left: auto;
     }
 
+    /* 页头与移动端一致：头像行可换行，联系方式贴最右、汉堡在其后，一言整行 */
+    .header-top {
+        flex-wrap: wrap;
+        row-gap: 12px;
+    }
+
+    /* 联系方式移到页头最右（与桌面一致） */
+    .nav.contacts {
+        width: auto;
+        flex: 0 0 auto;
+        margin-left: auto;
+    }
+
+    .nav.contacts ul.flat {
+        justify-content: flex-end;
+    }
+
+    /* 一言（联系方式下方模式）换行独占一行、左对齐 */
+    .site-description-aside {
+        flex-basis: 100%;
+    }
+
+    .header-aside .site-description {
+        text-align: left;
+    }
+
+    /* 上下留白与头像行下方模式一致（各 6px）：上方抵消 row-gap 12px 的一半，
+       下方覆盖 .header-yiyan-aside .header-top 的 18px */
+    .site-description-aside {
+        margin-top: -6px;
+    }
+
+    .header-yiyan-aside .header-top {
+        margin-bottom: 6px;
+    }
+
+    /* 一言文字稍小 */
+    .header .site-description h2 {
+        font-size: 0.875rem;
+    }
+
     .back-float {
         right: auto;
         left: 14px;
@@ -1250,11 +1196,6 @@ a.top-menu-btn:hover {
         margin-top: 8px;
     }
 
-    .back-float {
-        left: 14px;
-        top: 14px;
-    }
-
     .back-float .float-btn {
         width: 44px;
         height: 44px;
@@ -1273,6 +1214,17 @@ body::before {
     inset: 0;
     z-index: -2;
     background: var(--page-bg) center / cover no-repeat;
+}
+
+/* 默认背景：现代浏览器优先加载 WebP（约 25KB，原 JPEG 约 126KB）；
+   旧浏览器不支持 image-set 时继续用 --page-bg 的 JPEG；自定义背景不受影响 */
+@supports (background: image-set(url('../img/bg-default.webp') type('image/webp'))) {
+    body:not(.has-custom-bg)::before {
+        background-image: image-set(
+            url('../img/bg-default.webp') type('image/webp'),
+            url('../img/bg-default.jpg') type('image/jpeg')
+        );
+    }
 }
 
 body::after {
@@ -1319,83 +1271,11 @@ body.has-custom-bg .main {
     }
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .container > *:not(.header) {
-        animation: none;
-    }
-}
-
-/*美化框*/
-
-#mhz,
-#szh,
-#yyz{
-    /*圆角值,在此定义*/
-    border-radius: 8px;
-}
-/*迷幻紫*/
-
-#mhz {
-    color: #555555;
-    overflow: hidden;
-    margin: 10px 0;
-    padding: 15px 15px 15px 35px;
-    /*border-radius: 10px;*/
-    box-shadow: 6px 0 12px -5px rgb(190, 196, 252), -6px 0 12px -5px rgb(189, 196, 252);
-    background-color: #8EC5FC;
-    background-image: linear-gradient(62deg, #8EC5FC 0%, #E0C3FC 100%);
-    background-image: -webkit-linear-gradient(62deg, #8EC5FC 0%, #E0C3FC 100%);
-}
-
-/*优雅紫*/
-
-#yyz {
-    color: #ffffff;
-    overflow: hidden;
-    margin: 10px 0;
-    padding: 15px 15px 15px 35px;
-    /*border-radius: 10px;*/
-    box-shadow: 6px 0 12px -5px rgb(175, 160, 208), -6px 0 12px -5px rgba(177, 161, 207, 0);
-    background-image: radial-gradient( circle farthest-corner at 10% 20%, rgba(95, 117, 227, 1) 0%, rgba(188, 167, 205, 1) 90%);
-}
-
-
-/*深邃黑*/
-
-#szh {
-    color: #c7c7c7;
-    overflow: hidden;
-    margin: 10px 0;
-    padding: 15px 15px 15px 35px;
-    /*border-radius: 5px;*/
-    box-shadow: 6px 0 12px -5px rgb(155, 170, 185), -6px 0 12px -5px rgba(177, 161, 207, 0);
-    background-image: radial-gradient( circle farthest-corner at 10% 20%, rgba(0, 0, 0, 1) 0%, rgba(64, 64, 64, 1) 90.2%);
-}
-
-/*隐藏文字*/
-
-darkb-text {
-    background-color: #12121c;
-    color: #12121c;
-    text-shadow: none;
-    transition: color 0.3s;
-    /*padding-top: 3px;*/
-    padding: 2px 2px 2px 2px;
-    font-size: 14px;
-    border-radius: 4px;
-}
-
-darkb-text:hover,
-darkb-text:active {
-    color: #FFF;
-}
-
 /* 分页 */
 
 .pagination {
     margin: 0;
     padding: 10px 0 0;
-    text-align: left;
     display: flex;
     justify-content: space-between;
 }
@@ -1412,14 +1292,6 @@ darkb-text:active {
     padding-right: 20px;
 }
 
-.pagination .page-item.page-previous {
-    text-align: right;
-}
-
-.pagination .page-item.page-next {
-    text-align: right;
-}
-
 /* 上一页 / 下一页：悬停朱砂下划线（文字宽度，与文章标题同款） */
 .pagination a {
     padding-bottom: 3px;
@@ -1433,38 +1305,6 @@ darkb-text:active {
 .pagination a:hover {
     background-size: 100% 1px;
     text-decoration: none;
-}
-
-/* 视频尺寸 */
-
-.size-video {
-    position: relative;
-    border-radius: 5px;
-    padding-bottom: 66.5%;
-    height: 0;
-    border: 6px solid #f0f0f0;
-    overflow: hidden;
-}
-
-.size-video iframe {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        scroll-behavior: auto !important;
-        transition-duration: 0.01ms !important;
-    }
 }
 
 /* 404 页：编年断档（空心朱砂节点 + 墨色 404 + 朱砂「空」印），按钮为划线文字钮 */
@@ -1618,7 +1458,14 @@ darkb-text:active {
     text-decoration: none;
 }
 
-.nf-btn:hover::after {
+/* 触屏设备不保留粘滞的 hover 下划线；键盘聚焦同样展开 */
+@media (hover: hover) {
+    .nf-btn:hover::after {
+        right: 0;
+    }
+}
+
+.nf-btn:focus-visible::after {
     right: 0;
 }
 
@@ -1653,16 +1500,6 @@ darkb-text:active {
 
     .nf-btn {
         padding: 10px 6px;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .notfound-node,
-    .notfound-code-wrap,
-    .notfound-title,
-    .notfound-text,
-    .notfound-actions {
-        animation: none;
     }
 }
 
@@ -1772,7 +1609,7 @@ darkb-text:active {
 }
 
 .links-row:hover .links-desc {
-    color: var(--muted);
+    color: var(--link-muted);
 }
 
 .links-note {
@@ -1789,15 +1626,6 @@ darkb-text:active {
 .list-empty {
     color: var(--faint);
     text-align: center;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .links-row::after,
-    .archive-entry::after,
-    .recent-posts .posts .post .post-title-link a,
-    .pagination a {
-        transition: none;
-    }
 }
 
 @media (max-width: 567px) {
@@ -2176,4 +2004,33 @@ html.is-navigating .nav-progress {
 
 .container h1[tabindex="-1"]:focus {
     outline: none;
+}
+
+/* 减少动态效果：统一收口在文件末尾，确保覆盖各组件的动画声明 */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    .back-float .float-btn,
+    .container > *:not(.header),
+    .notfound-node,
+    .notfound-code-wrap,
+    .notfound-title,
+    .notfound-text,
+    .notfound-actions {
+        animation: none;
+    }
+
+    .links-row::after,
+    .archive-entry::after,
+    .recent-posts .posts .post .post-title-link a,
+    .pagination a {
+        transition: none;
+    }
 }

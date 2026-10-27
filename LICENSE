@@ -29,7 +29,8 @@ SOFTWARE.
 
 Third-party assets and services:
 - ZQL, a subset of the commercial font "ZouLDFXKAJ" (走路带风小可爱简 Regular),
-  at assets/fonts/zql-v2.woff2; loaded via jsDelivr by default. Distributed in
+  at assets/fonts/zql-c1.woff2, zql-c2.woff2 and zql-c3.woff2 (frequency-split
+  subsets); loaded via jsDelivr by default. Distributed in
   this repository by the owner's decision; font listings mark commercial use as
   requiring authorization — verify before reuse.
 - HarmonyOS Sans SC Medium: Copyright Huawei Device Co., Ltd., subject to the
@@ -41,7 +42,7 @@ Third-party assets and services:
   repository. The administrator is responsible for their licenses.
 - Remix Icon: Remix Icon License 1.0 (https://remixicon.com/). Bundled at
   css/remixicon.min.css and css/remixicon.woff2 as a subset containing only
-  the 19 icons used by the theme (generated with fonttools pyftsubset).
+  the 20 icons used by the theme (generated with fonttools pyftsubset).
 - highlight.js v11.11.1: BSD-3-Clause (https://highlightjs.org/).
 - normalize.css v8.0.1: MIT License (https://github.com/necolas/normalize.css).
   Bundled at css/normalize.min.css with a local modification

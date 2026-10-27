@@ -87,6 +87,10 @@ function yingDetectFontFormat(string $path): ?string
     if (!is_file($path) || filesize($path) === 0) {
         return null;
     }
+    // 上限 64MB：防止异常大文件占用内存/磁盘
+    if ((int)filesize($path) > 64 * 1024 * 1024) {
+        return null;
+    }
     $handle = @fopen($path, 'rb');
     if (!$handle) {
         return null;
@@ -242,21 +246,14 @@ function yingHarmonyFontUrls(): array
     ];
 }
 
-function yingCdnFontUrls(): array
-{
-    return [
-        'https://cdn.jsdelivr.net/gh/yiktt/YingK@main/assets/fonts/zql-v2.woff2',
-        'https://fastly.jsdelivr.net/gh/yiktt/YingK@main/assets/fonts/zql-v2.woff2',
-    ];
-}
-
 function yingFontUrls($options = null): array
 {
     $options = $options ?: \Widget\Options::alloc();
     $source = yingFontSource($options);
 
+    // CDN 字体的 @font-face（分片 + unicode-range）在 css/zql-fonts.css 中静态维护
     if ($source === 'cdn') {
-        return yingCdnFontUrls();
+        return [];
     }
     if ($source === 'harmony') {
         return yingHarmonyFontUrls();
@@ -283,8 +280,10 @@ function yingFontStack(bool $hasWebFont): string
 
 function yingNewPostDays(int $created): int
 {
-    $today = strtotime(date('Y-m-d'));
-    $day = strtotime(date('Y-m-d', $created));
+    $options = \Widget\Options::alloc();
+    $offset = (int)$options->timezone - (int)$options->serverTimezone;
+    $today = strtotime(date('Y-m-d', time() + $offset));
+    $day = strtotime(date('Y-m-d', $created + $offset));
     return (int)round(($today - $day) / 86400);
 }
 
@@ -478,7 +477,9 @@ function yingBumpViews(int $cid): void
         setcookie($cookie, '1', [
             'expires' => time() + 86400,
             'path' => '/',
-            'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+            'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+                || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
+                || ((int)($_SERVER['SERVER_PORT'] ?? 0) === 443),
             'httponly' => true,
             'samesite' => 'Lax',
         ]);
@@ -1273,7 +1274,7 @@ function themeConfigHandle(array $settings, bool $isInit): bool
         return false;
     }
 
-    unset($settings['fontFile'], $settings['fontRemove'], $settings['yingAdminSkin']);
+    unset($settings['fontFile'], $settings['yingAdminSkin']);
     $settings['fontUrl'] = trim((string)($settings['fontUrl'] ?? ''));
 
     $startDate = trim((string)($settings['siteStartDate'] ?? ''));

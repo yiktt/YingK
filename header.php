@@ -2,8 +2,10 @@
 $bgUrl = $this->options->bgUrl ? $this->options->bgUrl : $this->options->themeUrl . '/img/bg-default.jpg';
 $hasCustomBg = trim((string)$this->options->bgUrl) !== '';
 $bgCss = yingCssUrl($bgUrl);
-$fontUrls = yingFontUrls($this->options);
-$hasWebFont = !empty($fontUrls);
+$fontSource = yingFontSource($this->options);
+$fontUrls = $fontSource === 'cdn' ? [] : yingFontUrls($this->options);
+// CDN 字体的 @font-face 在 css/zql-fonts.css（分片 + unicode-range），此处仍算作有网络字体
+$hasWebFont = ($fontSource === 'cdn') || !empty($fontUrls);
 $fontSrc = implode(', ', array_map(function ($url) {
     return "url('" . yingCssUrl($url) . "')";
 }, $fontUrls));
@@ -18,7 +20,7 @@ if (!yingUrlIsSafe($faviconRaw)) {
     $faviconRaw = $logoRaw;
 }
 $faviconUrl = htmlspecialchars($faviconRaw, ENT_QUOTES);
-$siteTitle = htmlspecialchars((string)$this->options->title, ENT_QUOTES);
+$siteTitle = (string)$this->options->title;
 $alphaRaw = trim((string)$this->options->cardAlpha);
 $alphaVal = is_numeric($alphaRaw) && $alphaRaw !== '' ? floatval($alphaRaw) : 75;
 if ($alphaVal > 1) {
@@ -28,7 +30,6 @@ $cardAlpha = max(0.05, min(1, round($alphaVal, 2)));
 
 // 字体 CDN 预连接
 $preconnects = [];
-$fontSource = yingFontSource($this->options);
 if ($fontSource === 'cdn' || $fontSource === 'harmony') {
     $preconnects[] = 'https://cdn.jsdelivr.net';
     $preconnects[] = 'https://fastly.jsdelivr.net';
@@ -42,18 +43,22 @@ if ($fontSource === 'cdn' || $fontSource === 'harmony') {
     }
 }
 
+// 外部图源预连接（头像 / 背景图 / 站点图标；同源跳过；图片走 no-cors 连接，不带 crossorigin）
+$imagePreconnects = [];
+$siteHost = strtolower((string)parse_url((string)$this->options->siteUrl, PHP_URL_HOST));
+foreach ([$logoRaw, $bgUrl, $faviconRaw] as $imageUrlRaw) {
+    $imageScheme = strtolower((string)parse_url($imageUrlRaw, PHP_URL_SCHEME));
+    $imageHost = strtolower((string)parse_url($imageUrlRaw, PHP_URL_HOST));
+    if ($imageHost === '' || !in_array($imageScheme, ['http', 'https'], true) || $imageHost === $siteHost) {
+        continue;
+    }
+    $imagePreconnects[$imageScheme . '://' . $imageHost] = true;
+}
+$imagePreconnects = array_keys($imagePreconnects);
+
 // 联系方式：优先 JSON，空时回退旧字段
 $contacts = [];
-$contactTypes = [
-    'github'   => ['GitHub', 'ri-github-line'],
-    'mail'     => ['邮箱', 'ri-mail-line'],
-    'weibo'    => ['微博', 'ri-weibo-line'],
-    'twitter'  => ['X', 'ri-twitter-x-line'],
-    'bilibili' => ['B站', 'ri-bilibili-line'],
-    'zhihu'    => ['知乎', 'ri-zhihu-line'],
-    'telegram' => ['Telegram', 'ri-telegram-line'],
-    'link'     => ['链接', 'ri-link'],
-];
+$contactTypes = yingContactTypes();
 $contactsRaw = trim((string)$this->options->contactsJson);
 $contactsList = null;
 if ($contactsRaw !== '') {
@@ -128,6 +133,9 @@ if ($this->options->yiyanSource === 'api') {
     <?php foreach ($preconnects as $preconnectHost): ?>
     <link rel="preconnect" href="<?php echo htmlspecialchars($preconnectHost, ENT_QUOTES, 'UTF-8'); ?>" crossorigin>
     <?php endforeach; ?>
+    <?php foreach ($imagePreconnects as $imagePreconnectHost): ?>
+    <link rel="preconnect" href="<?php echo htmlspecialchars($imagePreconnectHost, ENT_QUOTES, 'UTF-8'); ?>">
+    <?php endforeach; ?>
     <title><?php
         $titlePrefix = '';
         $titleArchive = $this->getArchiveTitle();
@@ -160,8 +168,11 @@ if ($this->options->yiyanSource === 'api') {
     <link rel="stylesheet" href="<?php $this->options->themeUrl('css/normalize.min.css'); ?>">
     <link rel="stylesheet" href="<?php $this->options->themeUrl('css/main.css'); ?>?v=<?php echo (int)filemtime(__DIR__ . '/css/main.css'); ?>">
     <link rel="stylesheet" href="<?php $this->options->themeUrl('css/remixicon.min.css'); ?>?v=<?php echo (int)filemtime(__DIR__ . '/css/remixicon.min.css'); ?>">
+    <?php if ($fontSource === 'cdn'): ?>
+    <link rel="stylesheet" href="<?php $this->options->themeUrl('css/zql-fonts.css'); ?>?v=<?php echo (int)filemtime(__DIR__ . '/css/zql-fonts.css'); ?>">
+    <?php endif; ?>
     <style>
-    <?php if ($hasWebFont): ?>
+    <?php if ($hasWebFont && $fontSource !== 'cdn'): ?>
     @font-face {
         font-family: 'YingK Sans';
         src: <?php echo $fontSrc; ?>;
@@ -174,11 +185,11 @@ if ($this->options->yiyanSource === 'api') {
     </style>
     <?php $this->header('generator=&wlw=&rss2=&rss1=&atom='); ?>
     <?php
-    $feedTitle = (!empty($titleArchive) ? $titleArchive . ' &raquo; ' : '') . $siteTitle;
+    $feedTitle = (!empty($titleArchive) ? $titleArchive . ' » ' : '') . $siteTitle;
     ?>
-    <link rel="alternate" type="application/rss+xml" title="<?php echo htmlspecialchars($feedTitle . ' &raquo; RSS 2.0', ENT_QUOTES, 'UTF-8'); ?>" href="<?php echo htmlspecialchars($this->getArchiveFeedUrl(), ENT_QUOTES, 'UTF-8'); ?>">
-    <link rel="alternate" type="application/rdf+xml" title="<?php echo htmlspecialchars($feedTitle . ' &raquo; RSS 1.0', ENT_QUOTES, 'UTF-8'); ?>" href="<?php echo htmlspecialchars($this->getArchiveFeedRssUrl(), ENT_QUOTES, 'UTF-8'); ?>">
-    <link rel="alternate" type="application/atom+xml" title="<?php echo htmlspecialchars($feedTitle . ' &raquo; ATOM 1.0', ENT_QUOTES, 'UTF-8'); ?>" href="<?php echo htmlspecialchars($this->getArchiveFeedAtomUrl(), ENT_QUOTES, 'UTF-8'); ?>">
+    <link rel="alternate" type="application/rss+xml" title="<?php echo htmlspecialchars($feedTitle . ' » RSS 2.0', ENT_QUOTES, 'UTF-8'); ?>" href="<?php echo htmlspecialchars($this->getArchiveFeedUrl(), ENT_QUOTES, 'UTF-8'); ?>">
+    <link rel="alternate" type="application/rdf+xml" title="<?php echo htmlspecialchars($feedTitle . ' » RSS 1.0', ENT_QUOTES, 'UTF-8'); ?>" href="<?php echo htmlspecialchars($this->getArchiveFeedRssUrl(), ENT_QUOTES, 'UTF-8'); ?>">
+    <link rel="alternate" type="application/atom+xml" title="<?php echo htmlspecialchars($feedTitle . ' » ATOM 1.0', ENT_QUOTES, 'UTF-8'); ?>" href="<?php echo htmlspecialchars($this->getArchiveFeedAtomUrl(), ENT_QUOTES, 'UTF-8'); ?>">
 </head>
 <body<?php $bodyClasses = [];
     if ($this->is('post')) {
@@ -193,7 +204,7 @@ if ($this->options->yiyanSource === 'api') {
         <div class="container">
             <div class="header<?php if ($yiyanAside): ?> header-yiyan-aside<?php endif; ?>">
                 <div class="header-top">
-                <img class="site-avatar" src="<?php echo $logoUrl; ?>" width="72" height="72" alt="<?php echo $siteTitle; ?>"/>
+                <img class="site-avatar" src="<?php echo $logoUrl; ?>" width="72" height="72" alt="<?php echo htmlspecialchars($siteTitle, ENT_QUOTES, 'UTF-8'); ?>" decoding="async"/>
                 <?php if ($yiyanAside): ?>
                 <div class="header-aside">
                 <?php endif; ?>

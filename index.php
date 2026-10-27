@@ -33,6 +33,7 @@ $this->need('header.php');
             $markMode = 'none';
         }
         $hasPosts = false;
+        $tzOffset = (int)$this->options->timezone - (int)$this->options->serverTimezone;
         ?>
         <?php while ($this->next()): $hasPosts = true; ?>
             <?php
@@ -40,7 +41,7 @@ $this->need('header.php');
             $isNew = $days >= 0 && $days < 3;
             $showStamp = $isNew && ($markMode === 'stamp' || $markMode === 'both');
             $showRelative = $isNew && ($markMode === 'relative' || $markMode === 'both');
-            $absDate = htmlspecialchars(date('Y年m月d日', (int)$this->created), ENT_QUOTES);
+            $absDate = htmlspecialchars(date('Y年m月d日', (int)$this->created + $tzOffset), ENT_QUOTES);
             if ($days === 0) {
                 $relDate = _t('今天');
             } elseif ($days === 1) {

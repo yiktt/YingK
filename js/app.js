@@ -458,6 +458,27 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    // 滚动位置写回当前历史条目（节流），前进/后退时据此恢复到原位
+    var lastSavedScroll = -1;
+    var scrollSaveTimer = 0;
+    window.addEventListener('scroll', function () {
+        if (scrollSaveTimer) {
+            return;
+        }
+        scrollSaveTimer = setTimeout(function () {
+            scrollSaveTimer = 0;
+            if (navLock) {
+                return;
+            }
+            var y = window.scrollY || window.pageYOffset || 0;
+            if (y === lastSavedScroll) {
+                return;
+            }
+            lastSavedScroll = y;
+            saveScrollState();
+        }, 300);
+    }, {passive: true});
+
     function focusHeading() {
         var heading = document.querySelector('.container h1');
         if (!heading) {
@@ -548,8 +569,16 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function navigate(href, push, options) {
+        // 回退整页跳转：POST（搜索）场景走原生提交，避免丢失关键字
+        var hardFallback = function () {
+            if (options && typeof options.fallback === 'function') {
+                options.fallback();
+            } else {
+                location.href = href;
+            }
+        };
         if (navLock) {
-            location.href = href;
+            hardFallback();
             return;
         }
         navLock = true;
@@ -598,11 +627,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 }, 0);
                 focusHeading();
             })
-            .catch(function () {
-                // 任何异常都回退到整页跳转
-                location.href = href;
-            })
-            .finally(function () {
+            .catch(hardFallback)
+            .then(function () {
                 setNavigating(false);
                 navLock = false;
             });
@@ -622,7 +648,8 @@ document.addEventListener('DOMContentLoaded', function () {
             navigate(searchForm.getAttribute('action') || location.href, true, {
                 method: 'POST',
                 body: new URLSearchParams({s: kw}).toString(),
-                headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'}
+                headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'},
+                fallback: function () { searchForm.submit(); }
             });
         });
     }
