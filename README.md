@@ -59,6 +59,8 @@ git clone https://github.com/yiktt/YingK.git YingK
 
 > 主题设置按目录名保存。如果启用后修改主题文件夹名称，需要重新配置外观设置。
 
+> **部署安全提示**：Typecho 的 SQLite 数据库默认位于 `usr/typecho.db`，在 Web 根目录内，**任何服务器上都必须禁止外部访问该文件**（内含账号哈希与全部站点数据）。Nginx 可在 `usr/` 或 `usr/*.db` 上加 `deny all;`；Apache 在 `usr/.htaccess` 写入 `Require all denied`（2.4）/ `Deny from all`（2.2）。`usr/uploads/fonts` 需要保持可访问（主题本地字体从此加载），只拒绝数据库与备份文件即可。主题代码不依赖该文件的可访问性。
+
 更完整的字段、页面模板和运行细节见 **[配置说明](docs/configuration.md)**。
 
 ## 功能

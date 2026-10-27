@@ -16,8 +16,6 @@
     --time: #6b7280;
     --border-soft: rgba(0, 0, 0, 0.06);
     --border-strong: #cccccc;
-    --code-bg: #3a3a3a;
-    --code-border: #e8e8e8;
     --code-text: #eeeeee;
     --table-head-bg: #f6f8fa;
     --table-border: #dfe2e5;
@@ -26,8 +24,6 @@
     --tag-bg: #41464b;
     --tag-text: #ffffff;
     --shadow: 0 10px 20px 0 rgba(236, 236, 236, 0.86);
-    --top-btn-bg: #f0f0f0;
-    --top-btn-bg-hover: #dfdfdf;
     --top-btn-icon: #888888;
     --top-btn-icon-hover: #555555;
     --scrollbar-thumb: #999999;
@@ -59,8 +55,6 @@
     --time: #8b95a1;
     --border-soft: #34363c;
     --border-strong: #4a4f57;
-    --code-bg: #1b1c1f;
-    --code-border: #3a3d43;
     --code-text: #e6e8ea;
     --table-head-bg: #2c2e33;
     --table-border: #3a3d43;
@@ -69,8 +63,6 @@
     --tag-bg: #3a3f46;
     --tag-text: #d2d5da;
     --shadow: 0 10px 20px 0 rgba(0, 0, 0, 0.45);
-    --top-btn-bg: #33363c;
-    --top-btn-bg-hover: #41454d;
     --top-btn-icon: #aab1ba;
     --top-btn-icon-hover: #d2d5da;
     --scrollbar-thumb: #565b63;

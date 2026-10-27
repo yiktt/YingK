@@ -107,3 +107,13 @@
 ```
 
 换页后会恢复上一页的滚动位置、把焦点移到新页面 `h1`，并显示顶部细进度条。搜索提交以 POST 局部加载（跟随服务器重定向到 `/search/关键字/` 后替换内容区，地址栏为最终搜索页 URL）；后台表单与站外链接不参与局部加载。
+
+## 部署安全提示
+
+使用 SQLite 时数据库文件默认为 `usr/typecho.db`，位于 Web 根目录内，**必须禁止外部直接访问**（文件内含账号密码哈希、全部文章与站点设置）。实测在未加限制的服务器上 `GET /usr/typecho.db` 会直接下载整个数据库。
+
+- Nginx：`location ~ ^/usr/.*\.(db|sqlite|bak)$ { deny all; }`（或对整个 `usr/` 目录 `deny all`，但需为 `usr/uploads/` 另开 `allow`，因为本地字体与上传文件要从这里加载）。
+- Apache：在 `usr/` 下放置 `.htaccess`，内容 `Require all denied`（2.4）/ `Deny from all`（2.2）后，将 `usr/uploads/` 加入例外。
+- MySQL 环境同样建议限制 `usr/backups` 等目录的访问。主题本身不读取也不依赖这些文件的可访问性。
+
+其他与主题相关的安全约定：主题输出对标题、标签、分类、作者、一言、联系方式与友链均做 HTML 转义（`htmlspecialchars` + `ENT_QUOTES`）；`logoUrl`、`faviconUrl`、`bgUrl`、自定义字体地址走协议白名单（`http`/`https`/站内根路径），不安全地址会回落到内置资源；字体上传按文件头识别格式、限制 64MB，并拒绝任何不符合 `ying-font-<16位十六进制>.<woff2|woff|ttf|otf>` 命名的删除请求。正文字体之外的正文 HTML 由 Typecho 按作者输入原样输出（核心行为），多作者站点请自行限制作者权限或使用 HTML 过滤插件。
