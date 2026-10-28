@@ -106,24 +106,64 @@ document.addEventListener('DOMContentLoaded', function () {
     // ===== 顶部工具坞：桌面收起 / 展开（移动端不显示此把手） =====
     var menuHandle = document.getElementById('menu-handle');
     var menuItems = document.getElementById('top-menu-items');
+    var menuHamburger = document.getElementById('menu-hamburger');
+    var topMenuEl = document.getElementById('top-menu');
+    var mobileMenuBreakpoint = 880;
+    var lastMobileMenu = null;
 
-    if (menuHandle && menuItems) {
-        menuHandle.addEventListener('click', function () {
-            var open = menuItems.classList.toggle('open');
-            menuHandle.setAttribute('aria-expanded', open ? 'true' : 'false');
-            var icon = menuHandle.querySelector('i');
-            if (icon) {
-                icon.className = open ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line';
+    function isMobileMenu() {
+        return window.innerWidth <= mobileMenuBreakpoint;
+    }
+
+    function isElementVisible(el) {
+        if (!el) {
+            return false;
+        }
+        var style = getComputedStyle(el);
+        return style.display !== 'none' && style.visibility !== 'hidden' && el.getClientRects().length > 0;
+    }
+
+    // 收起时把主题/搜索/RSS 从 Tab 顺序移除；移动端工具坞未展开时同样不可操作。
+    function syncMenuItemsAccessibility() {
+        if (!menuItems) {
+            return;
+        }
+        var collapsed = isMobileMenu()
+            ? !(topMenuEl && topMenuEl.classList.contains('menu-open'))
+            : !menuItems.classList.contains('open');
+        if ('inert' in menuItems) {
+            menuItems.inert = collapsed;
+        }
+        if (collapsed) {
+            menuItems.setAttribute('inert', '');
+        } else {
+            menuItems.removeAttribute('inert');
+        }
+        menuItems.setAttribute('aria-hidden', collapsed ? 'true' : 'false');
+        Array.prototype.forEach.call(menuItems.querySelectorAll('button, a'), function (el) {
+            if (collapsed) {
+                if (!el.hasAttribute('data-ying-tabindex')) {
+                    el.setAttribute('data-ying-tabindex', String(el.tabIndex));
+                }
+                el.tabIndex = -1;
+            } else {
+                var original = el.getAttribute('data-ying-tabindex');
+                el.removeAttribute('data-ying-tabindex');
+                el.tabIndex = original === null ? 0 : parseInt(original, 10);
             }
         });
     }
 
-    // ===== 移动端汉堡菜单（联系方式行末尾，默认收起，展开后工具坞定位到按钮下方） =====
-    var menuHamburger = document.getElementById('menu-hamburger');
-    var topMenuEl = document.getElementById('top-menu');
+    function clearMenuPosition() {
+        if (topMenuEl) {
+            topMenuEl.style.top = '';
+            topMenuEl.style.right = '';
+        }
+    }
 
     function positionMenu() {
-        if (!menuHamburger || !topMenuEl) {
+        if (!menuHamburger || !topMenuEl || !isMobileMenu()
+            || !topMenuEl.classList.contains('menu-open')) {
             return;
         }
         var rect = menuHamburger.getBoundingClientRect();
@@ -139,20 +179,34 @@ document.addEventListener('DOMContentLoaded', function () {
         menuHamburger.setAttribute('aria-expanded', open ? 'true' : 'false');
         if (open) {
             positionMenu();
+        } else {
+            clearMenuPosition();
         }
+        syncMenuItemsAccessibility();
     }
 
+    if (menuHandle && menuItems) {
+        menuHandle.addEventListener('click', function () {
+            var open = menuItems.classList.toggle('open');
+            menuHandle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            var icon = menuHandle.querySelector('i');
+            if (icon) {
+                icon.className = open ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line';
+            }
+            if (!open && menuItems.contains(document.activeElement)) {
+                menuHandle.focus();
+            }
+            syncMenuItemsAccessibility();
+        });
+    }
+
+    // ===== 移动端汉堡菜单（联系方式行末尾，默认收起，展开后工具坞定位到按钮下方） =====
     if (menuHamburger && topMenuEl) {
         menuHamburger.addEventListener('click', function () {
             setHamburgerMenu(!topMenuEl.classList.contains('menu-open'));
         });
-        window.addEventListener('resize', function () {
-            if (topMenuEl.classList.contains('menu-open')) {
-                positionMenu();
-            }
-        }, {passive: true});
         document.addEventListener('click', function (e) {
-            if (getComputedStyle(menuHamburger).display === 'none') {
+            if (!isMobileMenu()) {
                 return;
             }
             if (topMenuEl.classList.contains('menu-open')
@@ -169,24 +223,74 @@ document.addEventListener('DOMContentLoaded', function () {
         var themeToggleBtn = document.getElementById('theme-toggle');
         if (themeToggleBtn) {
             themeToggleBtn.addEventListener('click', function () {
-                if (getComputedStyle(menuHamburger).display !== 'none') {
+                if (isMobileMenu()) {
                     setHamburgerMenu(false);
                 }
             });
         }
     }
 
+    function syncMenuBreakpoint() {
+        var mobile = isMobileMenu();
+        if (lastMobileMenu === mobile) {
+            return;
+        }
+        lastMobileMenu = mobile;
+        if (topMenuEl) {
+            topMenuEl.classList.remove('menu-open');
+        }
+        if (menuHamburger) {
+            menuHamburger.setAttribute('aria-expanded', 'false');
+        }
+        clearMenuPosition();
+        if (!mobile && menuItems) {
+            menuItems.classList.add('open');
+            if (menuHandle) {
+                menuHandle.setAttribute('aria-expanded', 'true');
+                var icon = menuHandle.querySelector('i');
+                if (icon) {
+                    icon.className = 'ri-arrow-up-s-line';
+                }
+            }
+        }
+        syncMenuItemsAccessibility();
+    }
+
+    syncMenuBreakpoint();
+    window.addEventListener('resize', function () {
+        syncMenuBreakpoint();
+        if (topMenuEl && topMenuEl.classList.contains('menu-open')) {
+            positionMenu();
+        }
+    }, {passive: true});
+
     // ===== 搜索面板 =====
     var searchBtn = document.getElementById('search-btn');
     var searchPanel = document.getElementById('search-panel');
 
-    function closeSearch() {
+    function closeSearch(restoreFocus) {
         if (!searchPanel) {
             return;
         }
+        var wasOpen = searchPanel.classList.contains('open');
         searchPanel.classList.remove('open');
         if (searchBtn) {
             searchBtn.setAttribute('aria-expanded', 'false');
+        }
+        if (!restoreFocus || !wasOpen) {
+            return;
+        }
+        // 只把焦点还给真实可见的控件，不制造新的隐藏焦点。
+        var target = null;
+        if (isMobileMenu()) {
+            target = isElementVisible(menuHamburger) ? menuHamburger : null;
+        } else {
+            target = isElementVisible(searchBtn)
+                ? searchBtn
+                : (isElementVisible(menuHamburger) ? menuHamburger : null);
+        }
+        if (target) {
+            target.focus();
         }
     }
 
@@ -196,8 +300,11 @@ document.addEventListener('DOMContentLoaded', function () {
         searchBtn.addEventListener('click', function () {
             var opened = searchPanel.classList.toggle('open');
             searchBtn.setAttribute('aria-expanded', opened ? 'true' : 'false');
-            if (opened && searchInput) {
-                searchInput.focus();
+            if (opened) {
+                setHamburgerMenu(false);
+                if (searchInput) {
+                    searchInput.focus();
+                }
             }
         });
 
@@ -210,8 +317,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                closeSearch();
+            if (e.key === 'Escape' && searchPanel.classList.contains('open')) {
+                closeSearch(true);
             }
         });
     }
@@ -504,6 +611,10 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
+        // 口令错误同页回显：结构未变，抑制入场动画重放，只留密印轻震
+        // （须在下方 adoptNode 把节点移出 doc 之前判定）
+        var inPlace = !!newContainer.querySelector('.post-lock.is-error');
+
         // 移除旧内容（保留页头 .header）——先快照，children 是动态集合
         Array.prototype.slice.call(container.children).forEach(function (el) {
             if (!el.classList.contains('header')) {
@@ -515,6 +626,19 @@ document.addEventListener('DOMContentLoaded', function () {
         Array.prototype.slice.call(newContainer.children).forEach(function (el) {
             if (!el.classList.contains('header')) {
                 container.appendChild(document.adoptNode(el));
+            }
+        });
+
+        // 就地回显时给插入内容挂 no-enter；.back-float 节点跨交换保留，需显式切回
+        var noEnterTargets = [document.querySelector('.back-float')];
+        Array.prototype.slice.call(container.children).forEach(function (el) {
+            if (!el.classList.contains('header')) {
+                noEnterTargets.push(el);
+            }
+        });
+        noEnterTargets.forEach(function (el) {
+            if (el) {
+                el.classList.toggle('no-enter', inPlace);
             }
         });
 
@@ -597,7 +721,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         fetch(href, init)
             .then(function (r) {
-                if (!r.ok) {
+                // 锁定态文章以 403 返回完整主题页：默认容忍以便就地换入；
+                // 其余 403/4xx/5xx（如错误页，无 .container）仍会在结构校验处回退整页
+                var tolerate = (options && options.tolerate) || [403];
+                if (!r.ok && !(tolerate.indexOf(r.status) > -1)) {
                     throw new Error('HTTP ' + r.status);
                 }
                 return r.text().then(function (html) {
@@ -625,7 +752,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 setTimeout(function () {
                     window.scrollTo(0, scrollToY);
                 }, 0);
-                focusHeading();
+                if (options && typeof options.afterSwap === 'function') {
+                    options.afterSwap();
+                } else {
+                    focusHeading();
+                }
             })
             .catch(hardFallback)
             .then(function () {
@@ -653,6 +784,40 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     }
+
+    // 密码表单：拦截提交，局部加载——口令错误同页提示，正确则就地换入正文
+    // 用委托绑定，局部加载替换表单后依然有效
+    document.addEventListener('submit', function (e) {
+        var form = e.target && e.target.closest ? e.target.closest('.post-lock-form') : null;
+        if (!form) {
+            return;
+        }
+        var pass = form.querySelector('input[name="yingLockPass"]');
+        if (!pass || !pass.value) {
+            return;
+        }
+        e.preventDefault();
+        navigate(form.getAttribute('action') || location.href, false, {
+            method: 'POST',
+            body: new FormData(form),
+            tolerate: [403],
+            afterSwap: function () {
+                var input = document.querySelector('.post-lock-field input');
+                if (input) {
+                    input.focus();
+                } else {
+                    focusHeading();
+                }
+            },
+            fallback: function () {
+                if (form.isConnected) {
+                    form.submit();
+                } else {
+                    location.reload();
+                }
+            }
+        });
+    });
 
     // 拦截站内链接点击
     document.addEventListener('click', function (e) {
@@ -686,7 +851,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (url.pathname.indexOf('/admin') === 0) {
             return;
         }
-        if (url.hash && url.pathname === location.pathname && url.search === location.search) {
+        // 含锚点的链接交给浏览器原生导航：跨页 #section 不会在 AJAX 换页时丢失。
+        if (url.hash) {
             return;
         }
         e.preventDefault();

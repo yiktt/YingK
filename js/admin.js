@@ -18,7 +18,19 @@
             key: 'surface',
             eyebrow: 'SURFACE',
             title: '页面',
-            fields: ['bgUrl', 'cardAlpha', 'newPostMark', 'siteStartDate']
+            fields: ['bgUrl', 'cardAlpha', 'newPostMark']
+        },
+        {
+            key: 'sticky',
+            eyebrow: 'PINNED',
+            title: '置顶',
+            fields: ['stickyPosts']
+        },
+        {
+            key: 'about',
+            eyebrow: 'ABOUT',
+            title: '关于页',
+            fields: ['aboutIntro', 'aboutQuote', 'aboutTopics', 'aboutTopicsTitle', 'aboutTheme', 'aboutThemeTitle', 'aboutStack', 'aboutStackTitle', 'aboutExtraSections', 'aboutOutro', 'siteStartDate', 'aboutStats', 'aboutStatsPos', 'aboutStatsAlign', 'aboutShowTimeline', 'aboutShowHeatmap']
         },
         {
             key: 'colophon',
@@ -34,7 +46,7 @@
         }
     ];
 
-    var WIDE_FIELDS = ['yiyan', 'yiyanCats', 'contactsJson', 'friendsJson', 'policebeian'];
+    var WIDE_FIELDS = ['yiyan', 'yiyanCats', 'contactsJson', 'friendsJson', 'policebeian', 'stickyPosts'];
 
     function formatBytes(bytes) {
         if (bytes >= 1048576) {
@@ -93,6 +105,48 @@
 
         function isSkinField(field) {
             return field.style.display === 'none' || !!field.querySelector('input[name="yingAdminSkin"]');
+        }
+
+        var aboutBlockSpecs = [
+            {title: 'aboutTopicsTitle', content: 'aboutTopics'},
+            {title: 'aboutThemeTitle', content: 'aboutTheme'},
+            {title: 'aboutStackTitle', content: 'aboutStack'}
+        ];
+
+        // 把可编辑小标题并入对应内容字段的同一个设置框。
+        function mergeAboutBlock(titleName, contentName) {
+            var titleField = findField(titleName);
+            var contentField = findField(contentName);
+            if (!titleField || !contentField || titleField === contentField) {
+                return;
+            }
+            var titleInput = titleField.querySelector('input[name="' + titleName + '"]');
+            var contentLi = contentField.firstElementChild;
+            if (!titleInput || !contentLi || contentLi.tagName !== 'LI') {
+                return;
+            }
+            contentField.classList.add('ying-about-combo');
+            titleField.hidden = true;
+            var head = document.createElement('div');
+            head.className = 'ying-about-combo-head';
+            var label = document.createElement('label');
+            label.textContent = '小标题';
+            if (titleInput.id) {
+                label.htmlFor = titleInput.id;
+            }
+            var note = document.createElement('span');
+            note.className = 'ying-about-combo-note';
+            note.textContent = '留空使用默认标题';
+            head.appendChild(label);
+            head.appendChild(titleInput);
+            head.appendChild(note);
+            var contentLabel = contentLi.querySelector('label');
+            if (contentLabel && contentLabel.nextSibling) {
+                contentLi.insertBefore(head, contentLabel.nextSibling);
+            } else {
+                contentLi.insertBefore(head, contentLi.firstChild);
+            }
+            titleInput.classList.add('ying-about-combo-input');
         }
 
         // Group the flat Typecho option list into readable sections.
@@ -223,6 +277,101 @@
             }
         }
 
+        var layout = document.createElement('div');
+        layout.className = 'ying-settings-layout';
+        var sectionNav = document.createElement('nav');
+        sectionNav.className = 'ying-settings-nav';
+        sectionNav.setAttribute('role', 'tablist');
+        sectionNav.setAttribute('aria-label', '设置章节');
+        var panels = document.createElement('div');
+        panels.className = 'ying-settings-panels';
+        var tabs = [];
+
+        function activateSection(index, focusTab) {
+            sections.forEach(function (section, sectionIndex) {
+                var selected = sectionIndex === index;
+                section.hidden = !selected;
+                tabs[sectionIndex].setAttribute('aria-selected', selected ? 'true' : 'false');
+                tabs[sectionIndex].tabIndex = selected ? 0 : -1;
+            });
+            if (focusTab && tabs[index]) {
+                tabs[index].focus();
+            }
+        }
+
+        sections.forEach(function (section, index) {
+            var match = section.className.match(/ying-section-([a-z0-9-]+)/);
+            var key = match ? match[1] : String(index);
+            var title = section.querySelector('.ying-section-title');
+            var eyebrow = section.querySelector('.ying-section-eyebrow');
+            var tab = document.createElement('button');
+            tab.type = 'button';
+            tab.className = 'ying-settings-tab';
+            tab.id = 'ying-tab-' + key;
+            tab.setAttribute('role', 'tab');
+            tab.setAttribute('aria-controls', 'ying-section-' + key);
+            var tabEyebrow = document.createElement('small');
+            tabEyebrow.textContent = eyebrow ? eyebrow.textContent : '';
+            var tabTitle = document.createElement('strong');
+            tabTitle.textContent = title ? title.textContent : '设置';
+            tab.appendChild(tabEyebrow);
+            tab.appendChild(tabTitle);
+            section.id = 'ying-section-' + key;
+            section.setAttribute('role', 'tabpanel');
+            section.setAttribute('aria-labelledby', tab.id);
+            tab.addEventListener('click', function () {
+                activateSection(index, false);
+            });
+            tab.addEventListener('keydown', function (event) {
+                var next = null;
+                if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+                    next = (index + 1) % tabs.length;
+                } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+                    next = (index - 1 + tabs.length) % tabs.length;
+                } else if (event.key === 'Home') {
+                    next = 0;
+                } else if (event.key === 'End') {
+                    next = tabs.length - 1;
+                }
+                if (next !== null) {
+                    event.preventDefault();
+                    activateSection(next, true);
+                }
+            });
+            sectionNav.appendChild(tab);
+            panels.appendChild(section);
+            tabs.push(tab);
+        });
+        layout.appendChild(sectionNav);
+        layout.appendChild(panels);
+        form.insertBefore(layout, saveBar || null);
+        aboutBlockSpecs.forEach(function (spec) {
+            mergeAboutBlock(spec.title, spec.content);
+        });
+        var initialSection = sections.findIndex(function (section) {
+            return section.querySelector('.message.error');
+        });
+        activateSection(initialSection >= 0 ? initialSection : 0, false);
+
+        // 原生 required 校验发生在隐藏侧签内时，先切到对应侧签并把焦点交给字段，
+        // 避免保存被拦截但用户看不到错误字段。
+        form.addEventListener('invalid', function (event) {
+            var field = event.target && event.target.closest
+                ? event.target.closest('ul.typecho-option') : null;
+            var section = field ? field.closest('.ying-section') : null;
+            if (section) {
+                var sectionIndex = sections.indexOf(section);
+                if (sectionIndex >= 0) {
+                    activateSection(sectionIndex, false);
+                }
+            }
+            window.setTimeout(function () {
+                try {
+                    event.target.focus();
+                } catch (error) {}
+            }, 0);
+        }, true);
+
         var saveNote = null;
         if (saveBar) {
             saveNote = document.createElement('span');
@@ -236,6 +385,49 @@
         }
 
         var dirty = false;
+        var initialSnapshot = '';
+
+        function formSnapshot() {
+            var values = [];
+            var elements = form.elements;
+            for (var i = 0; i < elements.length; i++) {
+                var el = elements[i];
+                if (!el.name) {
+                    continue;
+                }
+                var type = (el.type || '').toLowerCase();
+                if (type === 'button' || type === 'submit' || type === 'reset' || type === 'image') {
+                    continue;
+                }
+                if (type === 'file') {
+                    var files = el.files ? Array.prototype.slice.call(el.files).map(function (file) {
+                        return file.name + ':' + file.size;
+                    }) : [];
+                    values.push(el.name + '=' + files.join(','));
+                } else if (type === 'checkbox' || type === 'radio') {
+                    values.push(el.name + '=' + el.value + ':' + (el.checked ? '1' : '0'));
+                } else if (el.tagName === 'SELECT' && el.multiple) {
+                    var selected = [];
+                    for (var j = 0; j < el.options.length; j++) {
+                        if (el.options[j].selected) {
+                            selected.push(el.options[j].value);
+                        }
+                    }
+                    values.push(el.name + '=' + selected.join(','));
+                } else {
+                    values.push(el.name + '=' + String(el.value));
+                }
+            }
+            return values.join('\n');
+        }
+
+        function syncDirtyState() {
+            dirty = formSnapshot() !== initialSnapshot;
+            if (saveBar) {
+                saveBar.classList.toggle('is-dirty', dirty);
+            }
+            updateSaveNote();
+        }
 
         function currentSource() {
             for (var i = 0; i < sourceInputs.length; i++) {
@@ -309,13 +501,7 @@
         }
 
         function markDirty() {
-            if (!dirty) {
-                dirty = true;
-                if (saveBar) {
-                    saveBar.classList.add('is-dirty');
-                }
-            }
-            updateSaveNote();
+            syncDirtyState();
         }
 
         function syncSource() {
@@ -405,6 +591,31 @@
                 });
                 syncSource();
             });
+            var card = input.closest('.ying-font-card');
+            if (card) {
+                card.addEventListener('click', function (event) {
+                    // 删除复选框不属于“选择字体”动作。
+                    if (event.target.closest('.ying-font-remove')) {
+                        return;
+                    }
+                    window.setTimeout(function () {
+                        var wasLocal = currentSource() === 'local';
+                        input.checked = true;
+                        if (hiddenLocal) {
+                            hiddenLocal.value = input.value;
+                        }
+                        sourceInputs.forEach(function (sourceInput) {
+                            if (sourceInput.value === 'local') {
+                                sourceInput.checked = true;
+                            }
+                        });
+                        syncSource();
+                        if (!wasLocal) {
+                            markDirty();
+                        }
+                    }, 0);
+                });
+            }
         });
 
         if (urlInput) {
@@ -488,6 +699,8 @@
                     return;
                 }
                 if (event.dataTransfer.files.length > 1) {
+                    // 多文件不能被原生 file input 安全接收；清掉旧选择，保证界面与提交一致。
+                    fileInput.value = '';
                     showFileError('一次只能上传一个字体');
                     return;
                 }
@@ -495,6 +708,7 @@
                     fileInput.files = event.dataTransfer.files;
                     handleFile();
                 } catch (error) {
+                    fileInput.value = '';
                     showFileError('请点击选择字体文件');
                 }
             });
@@ -510,6 +724,7 @@
         });
 
         syncSource();
+        initialSnapshot = formSnapshot();
 
         if (deleteInputs.some(function (input) { return input.checked; })) {
             dirty = true;

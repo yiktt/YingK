@@ -7,12 +7,24 @@
 
 if (!defined('__TYPECHO_ROOT_DIR__')) exit;
 $this->need('header.php');
+if ($this->hidden) {
+    echo yingLockedPageHtml($this);
+    $this->need('footer.php');
+    return;
+}
 
-$offset = $this->options->timezone - $this->options->serverTimezone;
-$recent = \Widget\Contents\Post\Recent::alloc('pageSize=9999');
+$offset = (int)$this->options->timezone - (int)$this->options->serverTimezone;
+$db = \Typecho\Db::get();
+// 归档只取标题/时间/链接所需字段，不装载正文；分组与链接输出保持原样。
+$rows = $db->fetchAll($db->select('cid', 'title', 'slug', 'created', 'password', 'authorId')
+    ->from('table.contents')
+    ->where('status = ?', 'publish')
+    ->where('created < ?', (int)$this->options->time)
+    ->where('type = ?', 'post')
+    ->order('created', \Typecho\Db::SORT_DESC));
 $groups = [];
-while ($recent->next()) {
-    $localTime = intval($recent->created) + $offset;
+foreach ($rows as $row) {
+    $localTime = (int)$row['created'] + $offset;
     $key = date('Y-m', $localTime);
     if (!isset($groups[$key])) {
         $year = date('Y', $localTime);
@@ -24,10 +36,15 @@ while ($recent->next()) {
             'posts' => [],
         ];
     }
+    $password = (string)$row['password'];
+    $isHidden = $password !== ''
+        && $password !== (string)\Typecho\Cookie::get('protectPassword_' . $row['cid'])
+        && (int)$row['authorId'] !== (int)$this->user->uid
+        && !$this->user->pass('editor', true);
     $groups[$key]['count']++;
     $groups[$key]['posts'][] = [
-        'title' => $recent->title,
-        'permalink' => $recent->permalink,
+        'title' => $isHidden ? _t('此内容被密码保护') : (string)$row['title'],
+        'permalink' => \Typecho\Router::url('post', $row, $this->options->index),
         'day' => date('m.d', $localTime),
     ];
 }

@@ -23,10 +23,13 @@
             <button type="button" id="search-btn" class="top-menu-btn" aria-label="打开搜索" aria-expanded="false" aria-controls="search-panel"><i class="ri-search-line"></i></button>
             <a href="<?php $this->options->feedUrl(); ?>" target="_blank" rel="noopener" class="top-menu-btn" aria-label="RSS 订阅"><i class="ri-rss-line"></i></a>
         </div>
-        <form id="search-panel" class="search-panel" method="post" action="<?php $this->options->siteUrl(); ?>" role="search">
-            <input type="text" name="s" placeholder="输入关键字，回车搜索…" aria-label="搜索关键字"/>
-        </form>
     </div>
+    <form id="search-panel" class="search-panel" method="post" action="<?php $this->options->siteUrl(); ?>" role="search">
+        <span class="search-hinges" aria-hidden="true"><i></i><i></i></span>
+        <span class="search-ico" aria-hidden="true"><i class="ri-search-line"></i></span>
+        <input type="text" name="s" placeholder="搜索整站内容…" aria-label="搜索关键字"/>
+        <span class="search-esc" aria-hidden="true">esc</span>
+    </form>
     <div class="float-actions">
         <?php if ($this->is('post')): ?>
         <button type="button" id="to_top" class="float-btn scroll-btn" title="回到顶部" aria-label="回到顶部"><i class="ri-arrow-up-line"></i></button>

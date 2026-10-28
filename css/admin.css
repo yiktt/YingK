@@ -6,16 +6,17 @@
 
 .ying-settings,
 .ying-settings-col {
-    --ying-paper: #eef0e9;
-    --ying-surface: #fbfcf8;
-    --ying-ink: #151a18;
-    --ying-muted: #5c665f;
-    --ying-line: #c9cec5;
-    --ying-cobalt: #2647d8;
-    --ying-cobalt-soft: #e4e8fb;
+    --ying-paper: #e9ece5;
+    --ying-surface: #fafbf7;
+    --ying-ink: #1d241f;
+    --ying-muted: #69736b;
+    --ying-line: #c9d0c6;
+    --ying-accent: #a54836;
+    --ying-accent-soft: #f2e4df;
     --ying-danger: #a63a2a;
-    --ying-wash: #e5e8df;
+    --ying-wash: #f0f2ec;
     --ying-ui: "Avenir Next", "Segoe UI", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+    --ying-display: "Songti SC", "Noto Serif CJK SC", SimSun, serif;
     --ying-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, "Liberation Mono", monospace;
 }
 
@@ -27,9 +28,9 @@
     margin-right: auto !important;
     padding: 24px 32px 40px !important;
     background: var(--ying-paper);
-    border: 1px solid rgba(21, 26, 24, .06);
-    border-radius: 24px;
-    box-shadow: 0 1px 0 rgba(21, 26, 24, .04), 0 32px 80px -60px rgba(21, 26, 24, .6);
+    border: 1px solid rgba(29, 36, 31, .06);
+    border-radius: 20px;
+    box-shadow: 0 1px 0 rgba(29, 36, 31, .04), 0 32px 80px -60px rgba(29, 36, 31, .6);
     box-sizing: border-box;
 }
 
@@ -57,7 +58,7 @@
     list-style: none;
     background: var(--ying-surface);
     border: 1px solid var(--ying-line);
-    border-radius: 16px;
+    border-radius: 12px;
 }
 
 .ying-settings .typecho-option > li {
@@ -144,8 +145,8 @@
 .ying-settings input[type="password"]:focus,
 .ying-settings textarea:focus,
 .ying-settings select:focus {
-    border-color: var(--ying-cobalt) !important;
-    box-shadow: 0 0 0 3px var(--ying-cobalt-soft) !important;
+    border-color: var(--ying-accent) !important;
+    box-shadow: 0 0 0 3px var(--ying-accent-soft) !important;
     outline: none !important;
 }
 
@@ -216,7 +217,7 @@
 }
 
 .ying-settings .typecho-option span.multiline > input:focus-visible + label {
-    outline: 2px solid var(--ying-cobalt);
+    outline: 2px solid var(--ying-accent);
     outline-offset: 2px;
 }
 
@@ -255,7 +256,7 @@
 }
 
 .ying-settings .ying-source-field span.multiline > label:hover {
-    border-color: var(--ying-cobalt);
+    border-color: var(--ying-accent);
 }
 
 .ying-settings .ying-source-field span.multiline > input:checked + label {
@@ -291,8 +292,8 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: var(--ying-cobalt);
-    box-shadow: 0 0 0 3px var(--ying-cobalt-soft);
+    background: var(--ying-accent);
+    box-shadow: 0 0 0 3px var(--ying-accent-soft);
 }
 
 /* Font library */
@@ -327,9 +328,9 @@
 }
 
 .ying-settings .ying-font-card.is-active {
-    border-color: var(--ying-cobalt);
-    background: #f7f8ff;
-    box-shadow: inset 3px 0 0 var(--ying-cobalt);
+    border-color: var(--ying-accent);
+    background: var(--ying-accent-soft);
+    box-shadow: inset 3px 0 0 var(--ying-accent);
 }
 
 .ying-settings .ying-font-card.is-pending-delete {
@@ -416,8 +417,8 @@
 }
 
 .ying-settings .ying-font-stamp {
-    background: var(--ying-cobalt-soft);
-    color: var(--ying-cobalt);
+    background: var(--ying-accent-soft);
+    color: var(--ying-accent);
 }
 
 .ying-settings .ying-font-pending-stamp {
@@ -466,7 +467,7 @@
 }
 
 .ying-settings .ying-font-card:focus-within {
-    outline: 2px solid var(--ying-cobalt);
+    outline: 2px solid var(--ying-accent);
     outline-offset: 1px;
 }
 
@@ -542,8 +543,8 @@
 
 .ying-settings .ying-drop:hover,
 .ying-settings .ying-drop.is-dragover {
-    border-color: var(--ying-cobalt);
-    background: var(--ying-cobalt-soft);
+    border-color: var(--ying-accent);
+    background: var(--ying-accent-soft);
 }
 
 .ying-settings .ying-drop.is-error {
@@ -552,7 +553,7 @@
 }
 
 .ying-settings .ying-drop:focus-within {
-    outline: 2px solid var(--ying-cobalt);
+    outline: 2px solid var(--ying-accent);
     outline-offset: 2px;
 }
 
@@ -606,8 +607,8 @@
 }
 
 .ying-settings .ying-drop.has-file .ying-drop-file {
-    background: var(--ying-cobalt-soft);
-    color: var(--ying-cobalt);
+    background: var(--ying-accent-soft);
+    color: var(--ying-accent);
 }
 
 .ying-settings .ying-drop.is-error .ying-drop-file {
@@ -629,9 +630,97 @@
     line-height: 1.6;
 }
 
+.ying-settings .ying-settings-layout {
+    display: grid;
+    grid-template-columns: 190px minmax(0, 1fr);
+    overflow: hidden;
+    border: 1px solid var(--ying-line);
+    border-radius: 18px;
+    background: var(--ying-surface);
+}
+
+.ying-settings .ying-settings-nav {
+    display: flex;
+    flex-direction: column;
+    align-self: start;
+    gap: 4px;
+    min-width: 0;
+    padding: 20px 14px;
+    border-right: 1px solid var(--ying-line);
+    background: rgba(250, 251, 247, .45);
+}
+
+.ying-settings .ying-settings-tab {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    width: 100%;
+    min-height: 52px;
+    margin: 0;
+    padding: 8px 12px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--ying-muted);
+    font-family: var(--ying-ui);
+    text-align: left;
+    cursor: pointer;
+    transition: background .18s ease, color .18s ease;
+}
+
+.ying-settings .ying-settings-tab:hover {
+    background: rgba(250, 251, 247, .7);
+    color: var(--ying-ink);
+}
+
+.ying-settings .ying-settings-tab[aria-selected="true"] {
+    background: var(--ying-surface);
+    color: var(--ying-ink);
+    box-shadow: 0 4px 14px -12px rgba(29, 36, 31, .8);
+}
+
+.ying-settings .ying-settings-tab[aria-selected="true"]::after {
+    content: "";
+    position: absolute;
+    top: 8px;
+    right: -15px;
+    bottom: 8px;
+    width: 3px;
+    background: var(--ying-accent);
+}
+
+.ying-settings .ying-settings-tab:focus-visible {
+    outline: 2px solid var(--ying-accent);
+    outline-offset: 2px;
+}
+
+.ying-settings .ying-settings-tab small {
+    color: inherit;
+    font-family: var(--ying-mono);
+    font-size: 8px;
+    letter-spacing: .1em;
+    line-height: 1.4;
+    opacity: .65;
+}
+
+.ying-settings .ying-settings-tab strong {
+    color: inherit;
+    font-size: 12.5px;
+    font-weight: 650;
+    line-height: 1.5;
+}
+
+.ying-settings .ying-settings-panels {
+    min-width: 0;
+    padding: 24px 26px 28px;
+    background: var(--ying-surface);
+}
+
 /* Sections and field grid */
 .ying-settings .ying-section {
-    margin-top: 32px;
+    margin-top: 0;
 }
 
 .ying-settings .ying-section:first-of-type {
@@ -640,8 +729,9 @@
 
 .ying-settings .ying-section-head {
     display: block;
-    margin-bottom: 12px;
-    padding: 0 2px;
+    margin-bottom: 18px;
+    padding: 0 2px 13px;
+    border-bottom: 1px solid var(--ying-line);
 }
 
 .ying-settings .ying-section-heading {
@@ -650,7 +740,7 @@
 
 .ying-settings .ying-section-eyebrow {
     margin: 0 0 4px;
-    color: var(--ying-cobalt);
+    color: var(--ying-accent);
     font-family: var(--ying-mono);
     font-size: 9px;
     letter-spacing: .18em;
@@ -660,11 +750,11 @@
 .ying-settings .ying-section-title {
     margin: 0;
     color: var(--ying-ink);
-    font-family: var(--ying-ui);
-    font-size: 20px;
-    font-weight: 650;
+    font-family: var(--ying-display);
+    font-size: 24px;
+    font-weight: 600;
     line-height: 1.2;
-    letter-spacing: -.025em;
+    letter-spacing: .02em;
 }
 
 .ying-settings .ying-fields {
@@ -809,7 +899,7 @@
     height: 6px;
     margin-right: 7px;
     border-radius: 50%;
-    background: var(--ying-cobalt);
+    background: var(--ying-accent);
     vertical-align: 1px;
 }
 
@@ -819,7 +909,7 @@
     padding: 0 22px !important;
     border: 0 !important;
     border-radius: 12px !important;
-    background: var(--ying-cobalt) !important;
+    background: var(--ying-accent) !important;
     color: #fff !important;
     font-family: var(--ying-ui);
     font-size: 13px;
@@ -829,7 +919,7 @@
 }
 
 .ying-settings .ying-savebar .btn:hover {
-    background: #1f3bb7 !important;
+    background: #8f3e2f !important;
 }
 
 .ying-settings .ying-savebar .btn:focus-visible {
@@ -857,8 +947,8 @@
 
 .ying-settings #friend-add-btn:hover,
 .ying-settings #contact-add-btn:hover {
-    border-color: var(--ying-cobalt);
-    color: var(--ying-cobalt);
+    border-color: var(--ying-accent);
+    color: var(--ying-accent);
     background: transparent;
 }
 
@@ -900,6 +990,125 @@
     color: var(--ying-muted) !important;
 }
 
+.ying-settings .ying-json-warning {
+    margin: 8px 0 4px;
+    padding: 7px 10px;
+    border: 1px solid rgba(166, 58, 42, .28);
+    border-radius: 6px;
+    background: rgba(166, 58, 42, .07);
+    color: var(--ying-danger);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+#about-sections-editor .about-section-block {
+    margin: 8px 0 12px;
+    padding: 10px 12px;
+    border: 1px solid #dcdcdc;
+    border-radius: 6px;
+    background: #fafafa;
+}
+
+#about-sections-editor .about-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+#about-sections-editor .about-section-head strong {
+    color: #444;
+    font-size: 13px;
+}
+
+#about-sections-editor .about-section-del {
+    border: 0;
+    border-radius: 4px;
+    padding: 3px 12px;
+    background: #ffeceb;
+    color: #c0392b;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+#about-sections-editor .about-section-del:hover {
+    background: #ffd6d3;
+}
+
+#about-sections-editor .about-section-field {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 6px 0;
+}
+
+#about-sections-editor .about-section-field label {
+    flex: none;
+    width: 42px;
+    margin: 6px 0 0;
+    color: #666;
+    font-size: 13px;
+}
+
+#about-sections-editor .about-section-title,
+#about-sections-editor .about-section-body {
+    flex: 1;
+    min-width: 0;
+}
+
+#about-section-add {
+    margin-top: 4px;
+}
+
+.ying-settings .ying-about-combo {
+    margin: 8px 0 16px;
+    padding: 12px 14px 14px;
+    border: 1px solid var(--ying-line);
+    border-radius: 8px;
+    background: var(--ying-surface);
+}
+
+.ying-settings .ying-about-combo-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 0 9px;
+    padding-bottom: 9px;
+    border-bottom: 1px dashed var(--ying-line);
+}
+
+.ying-settings .ying-about-combo-head label {
+    flex: none;
+    margin: 0;
+    color: var(--ying-muted);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.ying-settings .ying-about-combo-input {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+}
+
+.ying-settings .ying-about-combo-note {
+    flex: none;
+    color: var(--ying-muted);
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+    .ying-settings .ying-about-combo-head {
+        flex-wrap: wrap;
+    }
+
+    .ying-settings .ying-about-combo-note {
+        flex-basis: 100%;
+        padding-left: 51px;
+    }
+}
+
 .ying-settings #contacts-editor .contact-block .ct-title {
     color: var(--ying-muted) !important;
     font-family: var(--ying-mono) !important;
@@ -939,12 +1148,52 @@
         padding-bottom: 16px;
     }
 
+    .ying-settings .ying-settings-layout {
+        grid-template-columns: 1fr;
+        border-radius: 14px;
+    }
+
+    .ying-settings .ying-settings-nav {
+        flex-direction: row;
+        gap: 5px;
+        padding: 10px;
+        overflow-x: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--ying-line);
+        scrollbar-width: thin;
+    }
+
+    .ying-settings .ying-settings-tab {
+        flex: none;
+        width: auto;
+        min-height: 44px;
+        padding: 7px 12px;
+        white-space: nowrap;
+    }
+
+    .ying-settings .ying-settings-tab small {
+        display: none;
+    }
+
+    .ying-settings .ying-settings-tab[aria-selected="true"]::after {
+        top: auto;
+        right: 12px;
+        bottom: 2px;
+        left: 12px;
+        width: auto;
+        height: 2px;
+    }
+
+    .ying-settings .ying-settings-panels {
+        padding: 20px 16px 24px;
+    }
+
     .ying-settings .ying-section {
-        margin-top: 24px;
+        margin-top: 0;
     }
 
     .ying-settings .ying-section-title {
-        font-size: 18px;
+        font-size: 22px;
     }
 
     .ying-settings .ying-fields {

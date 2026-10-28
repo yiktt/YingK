@@ -7,6 +7,11 @@
 
 if (!defined('__TYPECHO_ROOT_DIR__')) exit;
 $this->need('header.php');
+if ($this->hidden) {
+    echo yingLockedPageHtml($this);
+    $this->need('footer.php');
+    return;
+}
 
 $friends = [];
 if ($this->options->linksShow !== 'off') {
@@ -36,8 +41,11 @@ if ($this->options->linksShow !== 'off') {
         }
     }
     foreach ($list as $f) {
-        $name = isset($f['name']) ? trim((string)$f['name']) : '';
-        $url = isset($f['url']) ? trim((string)$f['url']) : '';
+        if (!is_array($f)) {
+            continue;
+        }
+        $name = isset($f['name']) && is_string($f['name']) ? trim($f['name']) : '';
+        $url = isset($f['url']) && is_string($f['url']) ? trim($f['url']) : '';
         if ($name === '' || $url === '') {
             continue;
         }
@@ -48,8 +56,8 @@ if ($this->options->linksShow !== 'off') {
             }
             $url = 'https://' . ltrim($url, '/');
         }
-        $desc = isset($f['desc']) ? trim((string)$f['desc']) : '';
-        $avatar = isset($f['avatar']) ? trim((string)$f['avatar']) : '';
+        $desc = isset($f['desc']) && is_string($f['desc']) ? trim($f['desc']) : '';
+        $avatar = isset($f['avatar']) && is_string($f['avatar']) ? trim($f['avatar']) : '';
         // 头像 URL 协议白名单
         if ($avatar !== '' && !preg_match('/^https?:\/\//i', $avatar)) {
             $avatar = '';

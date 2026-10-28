@@ -80,6 +80,74 @@ function yingIsLocalFont(string $filename): bool
 }
 
 /**
+ * 校验字体容器结构，拒绝只有签名的空壳/截断文件
+ * 只读取头部和表目录，不解析字形数据，也不执行字体代码。
+ */
+function yingFontStructureValid(string $path, string $format): bool
+{
+    $size = (int)filesize($path);
+    if ($size < 12) {
+        return false;
+    }
+    $handle = @fopen($path, 'rb');
+    if (!$handle) {
+        return false;
+    }
+    $header = fread($handle, 48);
+    fclose($handle);
+    if (!is_string($header) || strlen($header) < 12) {
+        return false;
+    }
+    $readUint32 = static function (string $bytes, int $offset): int {
+        $part = substr($bytes, $offset, 4);
+        return strlen($part) === 4 ? (int)unpack('N', $part)[1] : 0;
+    };
+    $readUint16 = static function (string $bytes, int $offset): int {
+        $part = substr($bytes, $offset, 2);
+        return strlen($part) === 2 ? (int)unpack('n', $part)[1] : 0;
+    };
+
+    if ($format === 'woff2' || $format === 'woff') {
+        $minimum = $format === 'woff2' ? 48 : 44;
+        if ($size < $minimum || strlen($header) < $minimum) {
+            return false;
+        }
+        $declaredLength = $readUint32($header, 8);
+        $tableCount = $readUint16($header, 12);
+        $totalSfntSize = $readUint32($header, 16);
+        return $declaredLength === $size && $tableCount > 0 && $totalSfntSize > 0;
+    }
+
+    // TTF / OTF：校验 sfnt 表目录边界。
+    $tableCount = $readUint16($header, 4);
+    if ($tableCount < 1 || $tableCount > 512) {
+        return false;
+    }
+    $directoryLength = 12 + $tableCount * 16;
+    if ($directoryLength > $size) {
+        return false;
+    }
+    $handle = @fopen($path, 'rb');
+    if (!$handle) {
+        return false;
+    }
+    $directory = fread($handle, $directoryLength);
+    fclose($handle);
+    if (!is_string($directory) || strlen($directory) !== $directoryLength) {
+        return false;
+    }
+    for ($i = 0; $i < $tableCount; $i++) {
+        $offset = 12 + $i * 16;
+        $tableOffset = $readUint32($directory, $offset + 8);
+        $tableLength = $readUint32($directory, $offset + 12);
+        if ($tableOffset > $size || $tableLength > $size - $tableOffset) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
  * 通过文件头识别字体格式，不信任原始扩展名
  */
 function yingDetectFontFormat(string $path): ?string
@@ -104,7 +172,11 @@ function yingDetectFontFormat(string $path): ?string
         "\x00\x01\x00\x00" => 'ttf',
         'true'             => 'ttf',
     ];
-    return $formats[$signature] ?? null;
+    $format = $formats[$signature] ?? null;
+    if ($format === null || !yingFontStructureValid($path, $format)) {
+        return null;
+    }
+    return $format;
 }
 
 function yingDeleteLocalFont(string $filename): void
@@ -278,6 +350,49 @@ function yingFontStack(bool $hasWebFont): string
     return "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Helvetica Neue', Arial, sans-serif";
 }
 
+/**
+ * 卡片透明度统一按 0–100 百分比解释；小于 1 的旧小数按比例兼容。
+ * 1 => 0.01，2 => 0.02，75 => 0.75，空值/非法值 => 默认 0.75。
+ */
+function yingCardAlphaValue(string $raw): float
+{
+    $raw = trim($raw);
+    if ($raw === '' || !is_numeric($raw)) {
+        return 0.75;
+    }
+    $value = (float)$raw;
+    if ($value > 0 && $value < 1) {
+        return max(0.01, min(1, round($value, 2)));
+    }
+    return max(0.01, min(1, round($value / 100, 2)));
+}
+
+/**
+ * 页头与独立错误页共用的主题渲染变量：字体来源、背景、卡片透明度
+ * （header.php 与 error.php 共用，避免两处逻辑漂移）
+ */
+function yingThemeChrome($options = null): array
+{
+    $options = $options ?: \Widget\Options::alloc();
+
+    $fontSource = yingFontSource($options);
+    $fontUrls = $fontSource === 'cdn' ? [] : yingFontUrls($options);
+    // CDN 字体的 @font-face 在 css/zql-fonts.css（分片 + unicode-range），此处仍算作有网络字体
+    $hasWebFont = ($fontSource === 'cdn') || !empty($fontUrls);
+    $fontSrc = implode(', ', array_map(function ($url) {
+        return "url('" . yingCssUrl($url) . "')";
+    }, $fontUrls));
+    $readingFont = yingFontStack($hasWebFont);
+
+    $bgRaw = $options->bgUrl ? (string)$options->bgUrl : $options->themeUrl . '/img/bg-default.jpg';
+    $hasCustomBg = trim((string)$options->bgUrl) !== '';
+    $bgCss = yingCssUrl($bgRaw);
+
+    $cardAlpha = yingCardAlphaValue((string)$options->cardAlpha);
+
+    return compact('fontSource', 'fontUrls', 'hasWebFont', 'fontSrc', 'readingFont', 'hasCustomBg', 'bgRaw', 'bgCss', 'cardAlpha');
+}
+
 function yingNewPostDays(int $created): int
 {
     $options = \Widget\Options::alloc();
@@ -288,6 +403,163 @@ function yingNewPostDays(int $created): int
 }
 
 /**
+ * 解析后台手动填写的置顶文章：文章 ID 或 slug，用逗号/空白分隔。
+ */
+function yingStickyTokens(string $value): array
+{
+    $tokens = [];
+    foreach (preg_split('/[,，\s\x{3000}]+/u', trim($value)) ?: [] as $token) {
+        $token = trim($token);
+        if ($token !== '' && !in_array($token, $tokens, true)) {
+            $tokens[] = $token;
+        }
+    }
+    return $tokens;
+}
+
+/**
+ * 首页第一页的置顶文章（最多 3 篇），按后台填写顺序返回。
+ * 只取已发布、未加密、非定时的文章；删除/草稿/加锁的文章自动跳过。
+ */
+function yingStickyPosts(): array
+{
+    static $sticky = null;
+    if ($sticky !== null) {
+        return $sticky;
+    }
+
+    $options = \Widget\Options::alloc();
+    $tokens = yingStickyTokens((string)($options->stickyPosts ?? ''));
+    if (!$tokens) {
+        return $sticky = [];
+    }
+
+    $db = \Typecho\Db::get();
+    $rows = [];
+    foreach ($tokens as $token) {
+        if (count($rows) >= 3) {
+            break;
+        }
+        $select = $db->select('cid', 'title', 'slug', 'created')
+            ->from('table.contents')
+            ->where('type = ?', 'post')
+            ->where('status = ?', 'publish')
+            ->where('created < ?', (int)$options->time)
+            ->where('password IS NULL OR password = ?', '')
+            ->limit(1);
+        if (ctype_digit($token)) {
+            $select->where('cid = ?', (int)$token);
+        } else {
+            $select->where('slug = ?', $token);
+        }
+        $row = $db->fetchRow($select);
+        if (!$row) {
+            continue;
+        }
+        $cid = (int)$row['cid'];
+        if (isset($rows[$cid])) {
+            continue;
+        }
+        $rows[$cid] = $row;
+    }
+    if (!$rows) {
+        return $sticky = [];
+    }
+
+    $offset = (int)$options->timezone - (int)$options->serverTimezone;
+    $route = \Typecho\Router::get('post');
+    $routeParams = is_array($route) && isset($route['params']) && is_array($route['params'])
+        ? $route['params'] : [];
+    $needsCategory = in_array('category', $routeParams, true);
+    $categories = [];
+    if ($needsCategory) {
+        $categoryRows = $db->fetchAll($db->select('table.relationships.cid', 'table.metas.slug')
+            ->from('table.relationships')
+            ->join('table.metas', 'table.relationships.mid = table.metas.mid')
+            ->where('table.relationships.cid IN ?', array_keys($rows))
+            ->where('table.metas.type = ?', 'category'));
+        foreach ($categoryRows as $categoryRow) {
+            $categoryCid = (int)$categoryRow['cid'];
+            $categorySlug = (string)$categoryRow['slug'];
+            if (!isset($categories[$categoryCid]) && $categorySlug !== '') {
+                $categories[$categoryCid] = $categorySlug;
+            }
+        }
+    }
+
+    $posts = [];
+    foreach ($rows as $cid => $row) {
+        $created = (int)$row['created'];
+        $params = [
+            'cid' => $cid,
+            'slug' => urlencode((string)$row['slug']),
+            'category' => isset($categories[$cid]) ? urlencode($categories[$cid]) : '',
+            'year' => date('Y', $created + $offset),
+            'month' => date('m', $created + $offset),
+            'day' => date('d', $created + $offset),
+        ];
+        $posts[] = [
+            'cid' => $cid,
+            'title' => (string)$row['title'],
+            'permalink' => \Typecho\Router::url('post', $params, $options->index),
+            'date' => date('Y年m月d日', $created + $offset),
+        ];
+    }
+    return $sticky = $posts;
+}
+
+/**
+ * 关于页统计缓存：只缓存聚合结果，不缓存文章正文。
+ * 使用文章数量、修改时间、最大 cid、最早时间、受保护文章状态与站点日期做签名；
+ * 发布/删除/编辑/加锁/解锁/建站日期变化后自动失效，另有 24 小时兜底刷新。
+ */
+function yingSiteStatsCachePath(): string
+{
+    $root = defined('__TYPECHO_ROOT_DIR__') ? __TYPECHO_ROOT_DIR__ : dirname(__DIR__, 3);
+    $root = rtrim(str_replace('\\', '/', $root), '/');
+    return $root . '/usr/uploads/.ying-site-stats-' . substr(md5($root), 0, 12) . '.json';
+}
+
+function yingSiteStatsSignature(\Widget\Options $options, $db): string
+{
+    $row = $db->fetchRow($db->select(
+        'COUNT(*) AS total',
+        'MAX(modified) AS modified',
+        'MAX(cid) AS maxcid',
+        'MIN(created) AS earliest'
+    )->from('table.contents')
+        ->where('status = ?', 'publish')
+        ->where('created < ?', (int)$options->time)
+        ->where('type = ?', 'post'));
+
+    $protectedRows = $db->fetchAll($db->select('cid', 'password')
+        ->from('table.contents')
+        ->where('status = ?', 'publish')
+        ->where('created < ?', (int)$options->time)
+        ->where('type = ?', 'post')
+        ->where('password IS NOT NULL'));
+    $protectedIds = [];
+    foreach ($protectedRows as $protectedRow) {
+        if ((string)($protectedRow['password'] ?? '') !== '') {
+            $protectedIds[] = (int)$protectedRow['cid'];
+        }
+    }
+    sort($protectedIds, SORT_NUMERIC);
+
+    return md5(json_encode([
+        'total' => (int)($row['total'] ?? 0),
+        'modified' => (int)($row['modified'] ?? 0),
+        'maxcid' => (int)($row['maxcid'] ?? 0),
+        'earliest' => (int)($row['earliest'] ?? 0),
+        'protected' => $protectedIds,
+        'start' => trim((string)$options->siteStartDate),
+        'timezone' => (int)$options->timezone,
+        'serverTimezone' => (int)$options->serverTimezone,
+        'day' => date('Y-m-d'),
+    ], JSON_UNESCAPED_UNICODE));
+}
+
+/**
  * 关于页统计：已发布文章数、总字数、运行天数
  * 建站日期取后台设置，未设置时回退到最早一篇文章的日期
  */
@@ -295,6 +567,25 @@ function yingSiteStats(): array
 {
     $options = \Widget\Options::alloc();
     $db = \Typecho\Db::get();
+    $cacheFile = yingSiteStatsCachePath();
+    $signature = yingSiteStatsSignature($options, $db);
+    if (is_file($cacheFile) && time() - (int)filemtime($cacheFile) < 86400) {
+        $cached = json_decode((string)@file_get_contents($cacheFile), true);
+        if (is_array($cached) && ($cached['signature'] ?? '') === $signature
+            && isset($cached['stats']) && is_array($cached['stats'])) {
+            $stats = $cached['stats'];
+            if (isset($stats['posts'], $stats['words'], $stats['start'])
+                && array_key_exists('days', $stats)) {
+                return [
+                    'posts' => (int)$stats['posts'],
+                    'words' => (int)$stats['words'],
+                    'days' => $stats['days'] === null ? null : (int)$stats['days'],
+                    'start' => (string)$stats['start'],
+                ];
+            }
+        }
+    }
+
     $rows = $db->fetchAll($db->select('created', 'text')->from('table.contents')
         ->where('status = ?', 'publish')
         ->where('created < ?', (int)$options->time)
@@ -321,19 +612,295 @@ function yingSiteStats(): array
         $days = max(0, (int)round((strtotime(date('Y-m-d')) - strtotime($start)) / 86400)) + 1;
     }
 
-    return ['posts' => $posts, 'words' => $words, 'days' => $days, 'start' => $start];
+    $stats = ['posts' => $posts, 'words' => $words, 'days' => $days, 'start' => $start];
+    @file_put_contents(
+        $cacheFile,
+        json_encode(['signature' => $signature, 'stats' => $stats], JSON_UNESCAPED_UNICODE),
+        LOCK_EX
+    );
+    return $stats;
 }
 
-function yingUptimeText(int $days): string
+/**
+ * 档案版的站点足迹与热力图共享缓存；签名与统计缓存一致，
+ * 文章发布/删除/编辑、时区或日期变化后失效。
+ */
+function yingAboutDataCachePath(): string
+{
+    $root = defined('__TYPECHO_ROOT_DIR__') ? __TYPECHO_ROOT_DIR__ : dirname(__DIR__, 3);
+    $root = rtrim(str_replace('\\', '/', $root), '/');
+    $temp = sys_get_temp_dir();
+    if ($temp === '' || !is_dir($temp) || !is_writable($temp)) {
+        return '';
+    }
+    return rtrim(str_replace('\\', '/', $temp), '/') . '/ying-about-' . substr(md5($root), 0, 12) . '.json';
+}
+
+function yingAboutMaskedTitle(array $row): string
+{
+    return (string)($row['password'] ?? '') !== ''
+        ? _t('此内容被密码保护')
+        : (string)($row['title'] ?? '');
+}
+
+function yingAboutTimelineData(): array
+{
+    $options = \Widget\Options::alloc();
+    $db = \Typecho\Db::get();
+    $offset = (int)$options->timezone - (int)$options->serverTimezone;
+    $earliest = $db->fetchRow($db->select('cid', 'title', 'created', 'password')
+        ->from('table.contents')
+        ->where('status = ?', 'publish')
+        ->where('created < ?', (int)$options->time)
+        ->where('type = ?', 'post')
+        ->order('created', \Typecho\Db::SORT_ASC)
+        ->limit(1));
+    $latest = $db->fetchRow($db->select('cid', 'title', 'created', 'modified', 'password')
+        ->from('table.contents')
+        ->where('status = ?', 'publish')
+        ->where('created < ?', (int)$options->time)
+        ->where('type = ?', 'post')
+        ->order('modified', \Typecho\Db::SORT_DESC)
+        ->limit(1));
+
+    $startRaw = trim((string)$options->siteStartDate);
+    $startExplicit = preg_match('/^\d{4}-\d{2}-\d{2}$/', $startRaw) === 1
+        && (bool)strtotime($startRaw);
+    $startDate = $startExplicit
+        ? $startRaw
+        : ($earliest ? date('Y-m-d', (int)$earliest['created'] + $offset) : '');
+    $entries = [];
+    if ($startDate !== '') {
+        $entries[] = [
+            'date' => $startDate,
+            'label' => $startExplicit ? _t('站点建立') : _t('开始记录'),
+            'title' => '',
+        ];
+    }
+    $earliestDate = $earliest ? date('Y-m-d', (int)$earliest['created'] + $offset) : '';
+    if ($earliest) {
+        $entries[] = [
+            'date' => $earliestDate,
+            'label' => _t('最早文章'),
+            'title' => yingAboutMaskedTitle($earliest),
+        ];
+    }
+    $latestStamp = $latest ? ((int)$latest['modified'] ?: (int)$latest['created']) : 0;
+    $latestDate = $latest ? date('Y-m-d', $latestStamp + $offset) : '';
+    $sameAsEarliest = $earliest && $latest
+        && (int)$earliest['cid'] === (int)$latest['cid']
+        && $earliestDate === $latestDate;
+    if ($latest && !$sameAsEarliest && $latestDate !== $startDate) {
+        $entries[] = [
+            'date' => $latestDate,
+            'label' => _t('最近更新'),
+            'title' => yingAboutMaskedTitle($latest),
+        ];
+    }
+    $dates = array_unique(array_column($entries, 'date'));
+    if (count($entries) < 2 || count($dates) < 2) {
+        return [];
+    }
+    usort($entries, static function (array $a, array $b): int {
+        return strcmp($b['date'], $a['date']);
+    });
+    return $entries;
+}
+
+function yingAboutHeatmapData(): array
+{
+    $options = \Widget\Options::alloc();
+    $db = \Typecho\Db::get();
+    $offset = (int)$options->timezone - (int)$options->serverTimezone;
+    $todayLocal = date('Y-m-d', time() + $offset);
+    try {
+        $today = new \DateTimeImmutable($todayLocal, new \DateTimeZone('UTC'));
+        $start = $today->modify('-364 days');
+        $start = $start->modify('-' . (int)$start->format('w') . ' days');
+    } catch (\Exception $e) {
+        return [];
+    }
+    $fromUtc = $start->getTimestamp() - $offset;
+    $rows = $db->fetchAll($db->select('created')->from('table.contents')
+        ->where('status = ?', 'publish')
+        ->where('created < ?', (int)$options->time)
+        ->where('type = ?', 'post')
+        ->where('created >= ?', (int)$fromUtc));
+    $counts = [];
+    foreach ($rows as $row) {
+        $key = date('Y-m-d', (int)$row['created'] + $offset);
+        $counts[$key] = ($counts[$key] ?? 0) + 1;
+    }
+    $cells = [];
+    $total = 0;
+    // 按“星期一行 × 53 周列”的 row-major 顺序生成，供 CSS grid 直接布局。
+    for ($day = 0; $day < 7; $day++) {
+        for ($week = 0; $week < 53; $week++) {
+            $date = $start->modify('+' . ($week * 7 + $day) . ' days');
+            $key = $date->format('Y-m-d');
+            $future = $date > $today;
+            $count = $future ? 0 : (int)($counts[$key] ?? 0);
+            if (!$future) {
+                $total += $count;
+            }
+            $cells[] = [
+                'date' => $key,
+                'count' => $count,
+                'future' => $future,
+                'weekday' => (int)$date->format('w'),
+            ];
+        }
+    }
+    if ($total === 0) {
+        return [];
+    }
+    $months = [];
+    $cursor = $start->modify('first day of this month');
+    while ($cursor <= $today && count($months) < 13) {
+        $months[] = $cursor->format('n') . _t('月');
+        $cursor = $cursor->modify('+1 month');
+    }
+    return [
+        'total' => $total,
+        'cells' => $cells,
+        'months' => $months,
+    ];
+}
+
+function yingAboutData(): array
+{
+    $options = \Widget\Options::alloc();
+    $db = \Typecho\Db::get();
+    $cacheFile = yingAboutDataCachePath();
+    $signature = yingSiteStatsSignature($options, $db);
+    if ($cacheFile !== '' && is_file($cacheFile) && time() - (int)filemtime($cacheFile) < 86400) {
+        $cached = json_decode((string)@file_get_contents($cacheFile), true);
+        if (is_array($cached) && ($cached['signature'] ?? '') === $signature
+            && isset($cached['timeline'], $cached['heatmap'])
+            && is_array($cached['timeline']) && is_array($cached['heatmap'])) {
+            return ['timeline' => $cached['timeline'], 'heatmap' => $cached['heatmap']];
+        }
+    }
+    $data = [
+        'timeline' => yingAboutTimelineData(),
+        'heatmap' => yingAboutHeatmapData(),
+    ];
+    if ($cacheFile !== '') {
+        @file_put_contents(
+            $cacheFile,
+            json_encode(['signature' => $signature, 'timeline' => $data['timeline'], 'heatmap' => $data['heatmap']], JSON_UNESCAPED_UNICODE),
+            LOCK_EX
+        );
+    }
+    return $data;
+}
+
+/**
+ * 关于页统计的启用项（后台勾选；选项从未保存时默认三项全开）
+ */
+function yingAboutStatsEnabled(): array
+{
+    $raw = \Widget\Options::alloc()->aboutStats;
+    if ($raw === null) {
+        return ['posts', 'words', 'days'];
+    }
+    $list = is_array($raw) ? $raw : explode(',', (string)$raw);
+    return array_values(array_intersect(['posts', 'words', 'days'], $list));
+}
+
+function yingAboutStatsPos(): string
+{
+    return (string)\Widget\Options::alloc()->aboutStatsPos === 'end' ? 'end' : 'top';
+}
+
+function yingAboutStatsAlign(): string
+{
+    $align = (string)\Widget\Options::alloc()->aboutStatsAlign;
+    return in_array($align, ['center', 'right'], true) ? $align : 'left';
+}
+
+/**
+ * 运行时长（数字后「年 / 天」用朱砂色标记）
+ */
+function yingUptimeHtml(int $days): string
 {
     if ($days < 365) {
-        return sprintf(_t('%d 天'), $days);
+        return number_format($days) . '<span class="u">' . _t('天') . '</span>';
     }
     $years = intdiv($days, 365);
     $rest = $days % 365;
-    return $rest > 0
-        ? sprintf(_t('%d 年 %d 天'), $years, $rest)
-        : sprintf(_t('%d 年'), $years);
+    $out = number_format($years) . '<span class="u">' . _t('年') . '</span>';
+    if ($rest > 0) {
+        $out .= ' ' . number_format($rest) . '<span class="u">' . _t('天') . '</span>';
+    }
+    return $out;
+}
+
+function yingAboutShowTimeline(): bool
+{
+    return (string)\Widget\Options::alloc()->aboutShowTimeline !== 'off';
+}
+
+function yingAboutShowHeatmap(): bool
+{
+    return (string)\Widget\Options::alloc()->aboutShowHeatmap !== 'off';
+}
+
+/**
+ * 档案版统计卡片的数据项；3/2/1 项均按实际启用项生成。
+ */
+function yingAboutStatsItems(): array
+{
+    $enabled = yingAboutStatsEnabled();
+    if (!$enabled) {
+        return [];
+    }
+    $stats = yingSiteStats();
+    $items = [];
+    if (in_array('posts', $enabled, true) && (int)$stats['posts'] > 0) {
+        $items[] = ['label' => _t('文章'), 'value' => number_format((int)$stats['posts']), 'unit' => _t('篇'), 'title' => ''];
+    }
+    if (in_array('words', $enabled, true) && (int)$stats['words'] > 0) {
+        $items[] = ['label' => _t('总字数'), 'value' => number_format((int)$stats['words']), 'unit' => _t('字'), 'title' => ''];
+    }
+    if (in_array('days', $enabled, true) && $stats['days'] !== null) {
+        $items[] = ['label' => _t('运行'), 'value' => number_format((int)$stats['days']), 'unit' => _t('天'), 'title' => (string)$stats['start']];
+    }
+    return $items;
+}
+
+/**
+ * 档案版统计卡：大号衬线数字 + 小标签 + 朱砂单位。
+ */
+function yingAboutStatsCardsHtml(string $slot): string
+{
+    if ($slot !== yingAboutStatsPos()) {
+        return '';
+    }
+    $items = yingAboutStatsItems();
+    if (!$items) {
+        return '';
+    }
+    $count = count($items);
+    $html = '<div class="about-stat-cards is-align-' . yingAboutStatsAlign()
+        . ($slot === 'end' ? ' is-end' : '') . ' is-count-' . $count
+        . '" role="list" aria-label="' . _t('站点统计') . '">';
+    foreach ($items as $item) {
+        $title = $item['title'] !== ''
+            ? ' title="' . htmlspecialchars(_t('起于 ') . $item['title'], ENT_QUOTES) . '"'
+            : '';
+        $html .= '<div class="about-stat-card" role="listitem"' . $title . '>'
+            . '<span class="about-stat-value">' . htmlspecialchars($item['value'], ENT_QUOTES)
+            . '<span class="u">' . htmlspecialchars($item['unit'], ENT_QUOTES) . '</span></span>'
+            . '<span class="about-stat-label">' . htmlspecialchars($item['label'], ENT_QUOTES) . '</span>'
+            . '</div>';
+    }
+    return $html . '</div>';
+}
+
+function yingAboutStatsDisplayHtml(string $slot): string
+{
+    return yingAboutStatsCardsHtml($slot);
 }
 
 function yingFontSourceOptions(): array
@@ -533,6 +1100,255 @@ function yingWordCount(string $html): int
 }
 
 /**
+ * JSON 根节点必须是列表；对象（含数字键对象）不再静默兼容，
+ * 避免 JS 编辑器把对象当成空数组后覆盖原有数据。
+ */
+function yingJsonList(string $value): ?array
+{
+    $value = trim($value);
+    if ($value === '') {
+        return [];
+    }
+    // json_decode 会把数字键对象转成数组；先按原始根字符拒绝对象。
+    if ($value[0] !== '[') {
+        return null;
+    }
+    $data = json_decode($value, true);
+    if (!is_array($data)) {
+        return null;
+    }
+    $expected = 0;
+    foreach ($data as $key => $item) {
+        if ($key !== $expected++) {
+            return null;
+        }
+    }
+    return $data;
+}
+
+/**
+ * 锁定页面统一输出核心口令表单：不渲染模板正文/统计，仍可正常解锁。
+ */
+function yingLockedPageHtml($archive): string
+{
+    return '<div class="post-content post-protected">' . (string)$archive->content . '</div>';
+}
+
+/**
+ * 关于页 Markdown：只解析 Markdown 语法，原始 HTML 保持转义。
+ */
+function yingAboutMarkdown(string $text): string
+{
+    $text = trim($text);
+    if ($text === '') {
+        return '';
+    }
+    if (class_exists('\Utils\HyperDown')) {
+        static $parser;
+        if (!$parser) {
+            $parser = new \Utils\HyperDown();
+            $parser->enableHtml(false);
+        }
+        return $parser->makeHtml($text);
+    }
+    return '<p>' . nl2br(htmlspecialchars($text, ENT_QUOTES, 'UTF-8')) . '</p>';
+}
+
+/**
+ * 档案版：单栏摘录笺、统计卡、站点足迹、近一年热力图。
+ * 只使用主题现有纸墨色与朱砂强调，不引入外部资源。
+ */
+function yingAboutDossierHtml(): string
+{
+    $options = \Widget\Options::alloc();
+    $fields = ['aboutIntro', 'aboutQuote', 'aboutTopics', 'aboutTheme', 'aboutStack', 'aboutOutro'];
+    $values = [];
+    foreach ($fields as $field) {
+        $values[$field] = trim((string)$options->{$field});
+    }
+    $escape = static function (string $value): string {
+        return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+    };
+    $pairs = static function (string $raw): array {
+        $rows = [];
+        foreach (preg_split('/\R/u', $raw) ?: [] as $line) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+            $parts = preg_split('/\s*[|｜]\s*/u', $line, 2) ?: [];
+            $key = trim((string)($parts[0] ?? ''));
+            if ($key === '') {
+                continue;
+            }
+            $rows[] = [$key, trim((string)($parts[1] ?? ''))];
+        }
+        return $rows;
+    };
+
+    $extraSections = [];
+    $extrasValue = $options->aboutExtraSections;
+    if (is_array($extrasValue)) {
+        $extrasData = $extrasValue;
+    } else {
+        $extrasRaw = trim((string)$extrasValue);
+        $extrasData = $extrasRaw !== '' ? yingJsonList($extrasRaw) : [];
+    }
+    if (is_array($extrasData)) {
+        foreach ($extrasData as $extra) {
+            if (!is_array($extra)) {
+                continue;
+            }
+            $extraTitle = isset($extra['title']) && is_string($extra['title'])
+                ? trim($extra['title']) : '';
+            $extraBody = isset($extra['body']) && is_string($extra['body'])
+                ? trim($extra['body']) : '';
+            if ($extraTitle === '' && $extraBody === '') {
+                continue;
+            }
+            $extraSections[] = ['title' => $extraTitle, 'body' => $extraBody];
+        }
+    }
+
+    $intro = $values['aboutIntro'] !== '' ? yingAboutMarkdown($values['aboutIntro']) : '';
+    $quoteHtml = $values['aboutQuote'] !== ''
+        ? '<blockquote class="about-quote about-letter-pullquote"><p>'
+            . $escape($values['aboutQuote']) . '</p></blockquote>'
+        : '';
+    $topics = $pairs($values['aboutTopics']);
+    $topicsHtml = '';
+    if ($topics) {
+        $topicsHtml = '<ul class="about-letter-topics">';
+        foreach ($topics as $topic) {
+            $topicsHtml .= '<li><strong>' . $escape($topic[0]) . '</strong>'
+                . ($topic[1] !== '' ? '<span>' . $escape($topic[1]) . '</span>' : '')
+                . '</li>';
+        }
+        $topicsHtml .= '</ul>';
+    }
+
+    $themeHtml = $values['aboutTheme'] !== '' ? yingAboutMarkdown($values['aboutTheme']) : '';
+    $stack = $pairs($values['aboutStack']);
+    $stackHtml = '';
+    if ($stack) {
+        $stackHtml = '<table class="about-stack-table"><thead><tr><th>' . _t('组件')
+            . '</th><th>' . _t('选择') . '</th></tr></thead><tbody>';
+        foreach ($stack as $row) {
+            $stackHtml .= '<tr><td>' . $escape($row[0]) . '</td><td>' . $escape($row[1]) . '</td></tr>';
+        }
+        $stackHtml .= '</tbody></table>';
+    }
+
+    $topicsTitle = trim((string)($options->aboutTopicsTitle ?? ''));
+    if ($topicsTitle === '') {
+        $topicsTitle = _t('这里写什么');
+    }
+    $themeTitle = trim((string)($options->aboutThemeTitle ?? ''));
+    if ($themeTitle === '') {
+        $themeTitle = _t('关于这个主题');
+    }
+    $stackTitle = trim((string)($options->aboutStackTitle ?? ''));
+    if ($stackTitle === '') {
+        $stackTitle = _t('技术栈');
+    }
+
+    $blocks = [];
+    if ($topicsHtml !== '') {
+        $blocks[] = [$topicsTitle, $topicsHtml];
+    }
+    if ($themeHtml !== '') {
+        $blocks[] = [$themeTitle, $themeHtml];
+    }
+    if ($stackHtml !== '') {
+        $blocks[] = [$stackTitle, $stackHtml];
+    }
+    foreach ($extraSections as $extraSection) {
+        $blocks[] = [
+            $extraSection['title'] !== '' ? $extraSection['title'] : _t('补记'),
+            yingAboutMarkdown($extraSection['body']),
+        ];
+    }
+
+    $data = [];
+    if (yingAboutShowTimeline() || yingAboutShowHeatmap()) {
+        $data = yingAboutData();
+    }
+    $timeline = yingAboutShowTimeline() && !empty($data['timeline']) ? $data['timeline'] : [];
+    $heatmap = yingAboutShowHeatmap() && !empty($data['heatmap']) ? $data['heatmap'] : [];
+
+    $html = '<div class="post-content about-content about-dossier" itemprop="articleBody">';
+    if ($intro !== '' || $quoteHtml !== '' || $blocks !== []) {
+        $html .= '<div class="about-letter">';
+        if ($intro !== '') {
+            $html .= '<div class="about-letter-intro">' . $intro . '</div>';
+        }
+        $html .= $quoteHtml;
+        foreach ($blocks as $block) {
+            $html .= '<section class="about-letter-line"><h2 class="about-letter-label">'
+                . $escape($block[0]) . '</h2><div class="about-letter-body">'
+                . $block[1] . '</div></section>';
+        }
+        $html .= '</div>';
+    }
+    if ($timeline) {
+        $html .= '<section class="about-dossier-section about-footprint" aria-labelledby="about-footprint-title">'
+            . '<h2 id="about-footprint-title" class="about-dossier-section-title">' . _t('站点足迹') . '</h2>'
+            . '<ol class="about-footprint-list">';
+        foreach ($timeline as $item) {
+            $html .= '<li class="about-footprint-item"><time datetime="' . $escape($item['date']) . '">'
+                . $escape($item['date']) . '</time><span class="about-footprint-event">'
+                . $escape($item['label']) . '</span>';
+            if ($item['title'] !== '') {
+                $html .= '<span class="about-footprint-title">' . $escape($item['title']) . '</span>';
+            }
+            $html .= '</li>';
+        }
+        $html .= '</ol></section>';
+    }
+    if ($heatmap) {
+        $max = 0;
+        foreach ($heatmap['cells'] as $cell) {
+            $max = max($max, (int)$cell['count']);
+        }
+        $html .= '<section class="about-dossier-section about-activity" aria-labelledby="about-activity-title">'
+            . '<div class="about-dossier-section-head"><h2 id="about-activity-title" class="about-dossier-section-title">'
+            . _t('文章活跃') . '</h2><span class="about-dossier-section-note">'
+            . sprintf(_t('近一年 · %d 篇'), (int)$heatmap['total']) . '</span></div>'
+            . '<div class="about-heatmap-months" aria-hidden="true">';
+        foreach ($heatmap['months'] as $month) {
+            $html .= '<span>' . $escape($month) . '</span>';
+        }
+        $html .= '</div><div class="about-heatmap-grid" role="img" aria-label="'
+            . $escape(sprintf(_t('近一年文章活跃热力图，共 %d 篇；颜色越深表示当天文章越多'), (int)$heatmap['total']))
+            . '">';
+        foreach ($heatmap['cells'] as $cell) {
+            $level = ((int)$cell['count'] === 0 || $max === 0)
+                ? 0 : max(1, min(4, (int)ceil((int)$cell['count'] * 4 / $max)));
+            $title = !empty($cell['future']) ? ''
+                : $escape($cell['date'] . ' · ' . sprintf(_t('%d 篇'), (int)$cell['count']));
+            $html .= '<span class="about-heatmap-cell level-' . $level
+                . (!empty($cell['future']) ? ' is-future' : '')
+                . '"' . ($title !== '' ? ' title="' . $title . '"' : '') . '></span>';
+        }
+        $html .= '</div></section>';
+    }
+    if ($values['aboutOutro'] !== '') {
+        $html .= '<div class="about-dossier-outro">' . yingAboutMarkdown($values['aboutOutro']) . '</div>';
+    }
+    $html .= yingAboutStatsDisplayHtml('end');
+    $html .= '</div><p class="about-end" aria-hidden="true">' . _t('完') . '</p>';
+    return $html;
+}
+
+/**
+ * 关于页结构化内容、文末统计与「完」的统一输出（about.php 与 start-page 共用）。
+ */
+function yingAboutMainHtml(): string
+{
+    return yingAboutDossierHtml();
+}
+
+/**
  * 为正文 <img> 补 loading="lazy" 与 decoding="async"，已声明 loading 的不动
  */
 function yingContentHtml(string $html): string
@@ -583,17 +1399,41 @@ function yingFriendsEditorHtml(): string
         storage.dataset.yingReady = '1';
         storage.type = 'hidden';
         var model = [];
+        var rootInvalid = false;
+        var warning = document.createElement('p');
+        warning.id = 'friends-json-warning';
+        warning.className = 'ying-json-warning';
+        warning.setAttribute('role', 'alert');
+        warning.hidden = true;
+        wrap.parentNode.insertBefore(warning, wrap);
+        function showWarning(message) {
+            rootInvalid = true;
+            warning.textContent = message;
+            warning.hidden = false;
+            addBtn.disabled = true;
+        }
         try {
-            model = JSON.parse(storage.value || '[]');
-            if (!Array.isArray(model)) {
-                model = [];
+            var raw = storage.value.trim();
+            if (raw !== '') {
+                var parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) {
+                    model = parsed;
+                } else {
+                    showWarning('友链数据的根节点必须是列表（数组），当前数据未改动；请修复后再保存。');
+                }
             }
         } catch (e) {
-            model = [];
+            showWarning('友链数据不是合法 JSON，当前数据未改动；请修复后再保存。');
         }
 
         function serialize() {
-            storage.value = JSON.stringify(model);
+            if (!rootInvalid) {
+                storage.value = JSON.stringify(model);
+            }
+        }
+
+        function notifyDirty() {
+            storage.dispatchEvent(new Event('input', {bubbles: true}));
         }
 
         function drawPreview(el, avatar, name) {
@@ -653,6 +1493,9 @@ function yingFriendsEditorHtml(): string
                     model.splice(i, 1);
                     render();
                     serialize();
+                    if (!rootInvalid) {
+                        notifyDirty();
+                    }
                 });
                 wrap.appendChild(block);
             });
@@ -662,6 +1505,9 @@ function yingFriendsEditorHtml(): string
             model.push({ name: '', url: '', desc: '', avatar: '' });
             render();
             serialize();
+            if (!rootInvalid) {
+                notifyDirty();
+            }
             var blocks = wrap.querySelectorAll('.friend-block');
             var last = blocks[blocks.length - 1];
             if (last) {
@@ -740,18 +1586,42 @@ function yingContactsEditorHtml(): string
         storage.dataset.yingReady = '1';
         storage.type = 'hidden';
         var model = [];
+        var rootInvalid = false;
+        var warning = document.createElement('p');
+        warning.id = 'contacts-json-warning';
+        warning.className = 'ying-json-warning';
+        warning.setAttribute('role', 'alert');
+        warning.hidden = true;
+        wrap.parentNode.insertBefore(warning, wrap);
+        function showWarning(message) {
+            rootInvalid = true;
+            warning.textContent = message;
+            warning.hidden = false;
+            addBtn.disabled = true;
+        }
         try {
-            model = JSON.parse(storage.value || '[]');
-            if (!Array.isArray(model)) {
-                model = [];
+            var raw = storage.value.trim();
+            if (raw !== '') {
+                var parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) {
+                    model = parsed;
+                } else {
+                    showWarning('联系方式数据的根节点必须是列表（数组），当前数据未改动；请修复后再保存。');
+                }
             }
         } catch (e) {
-            model = [];
+            showWarning('联系方式数据不是合法 JSON，当前数据未改动；请修复后再保存。');
         }
         var typeOptions = '{$options}';
 
         function serialize() {
-            storage.value = JSON.stringify(model);
+            if (!rootInvalid) {
+                storage.value = JSON.stringify(model);
+            }
+        }
+
+        function notifyDirty() {
+            storage.dispatchEvent(new Event('input', {bubbles: true}));
         }
 
         function render() {
@@ -791,6 +1661,9 @@ function yingContactsEditorHtml(): string
                     model.splice(i, 1);
                     render();
                     serialize();
+                    if (!rootInvalid) {
+                        notifyDirty();
+                    }
                 });
                 wrap.appendChild(block);
             });
@@ -800,11 +1673,133 @@ function yingContactsEditorHtml(): string
             model.push({ type: 'github', url: '', icon: '' });
             render();
             serialize();
+            if (!rootInvalid) {
+                notifyDirty();
+            }
             var blocks = wrap.querySelectorAll('.contact-block');
             var last = blocks[blocks.length - 1];
             if (last) {
                 last.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 last.querySelector('.c-url').focus();
+            }
+        });
+
+        var form = storage.closest('form');
+        if (form) {
+            form.addEventListener('submit', serialize);
+        }
+        render();
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot);
+    } else {
+        boot();
+    }
+})();
+</script>
+HTML;
+}
+
+/**
+ * 关于页自定义内容板块编辑器（标题 + 多段纯文本，可增删）。
+ */
+function yingAboutSectionsEditorHtml(): string
+{
+    return <<<'HTML'
+<div id="about-sections-editor"></div>
+<button type="button" id="about-section-add" class="btn btn-s">+ 添加内容板块</button>
+<script>
+(function () {
+    function boot() {
+        var storage = document.querySelector('input[name=aboutExtraSections]');
+        var wrap = document.getElementById('about-sections-editor');
+        var addBtn = document.getElementById('about-section-add');
+        if (!storage || !wrap || !addBtn || storage.dataset.yingReady) {
+            return;
+        }
+        storage.dataset.yingReady = '1';
+        storage.type = 'hidden';
+        var model = [];
+        var rootInvalid = false;
+        var warning = document.createElement('p');
+        warning.id = 'about-sections-warning';
+        warning.className = 'ying-json-warning';
+        warning.setAttribute('role', 'alert');
+        warning.hidden = true;
+        wrap.parentNode.insertBefore(warning, wrap);
+        function showWarning(message) {
+            rootInvalid = true;
+            warning.textContent = message;
+            warning.hidden = false;
+            addBtn.disabled = true;
+        }
+        try {
+            var raw = storage.value.trim();
+            if (raw !== '') {
+                var parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) {
+                    model = parsed;
+                } else {
+                    showWarning('内容板块数据的根节点必须是列表（数组），当前数据未改动；请修复后再保存。');
+                }
+            }
+        } catch (e) {
+            showWarning('内容板块数据不是合法 JSON，当前数据未改动；请修复后再保存。');
+        }
+
+        function serialize() {
+            if (!rootInvalid) {
+                storage.value = JSON.stringify(model);
+            }
+        }
+
+        function notifyDirty() {
+            storage.dispatchEvent(new Event('input', {bubbles: true}));
+        }
+
+        function render() {
+            wrap.innerHTML = '';
+            model.forEach(function (item, index) {
+                var block = document.createElement('div');
+                block.className = 'about-section-block';
+                block.innerHTML =
+                    '<div class="about-section-head"><strong>内容板块 ' + (index + 1) + '</strong>' +
+                    '<button type="button" class="about-section-del">删除</button></div>' +
+                    '<div class="about-section-field"><label>标题</label>' +
+                    '<input type="text" class="about-section-title" placeholder="例如：近况"></div>' +
+                    '<div class="about-section-field"><label>正文</label>' +
+                    '<textarea class="about-section-body" rows="3" placeholder="每行一段，纯文本"></textarea></div>';
+                var titleInput = block.querySelector('.about-section-title');
+                var bodyInput = block.querySelector('.about-section-body');
+                titleInput.value = typeof item.title === 'string' ? item.title : '';
+                bodyInput.value = typeof item.body === 'string' ? item.body : '';
+                var sync = function () {
+                    item.title = titleInput.value.trim();
+                    item.body = bodyInput.value;
+                    serialize();
+                };
+                titleInput.addEventListener('input', function () { sync(); notifyDirty(); });
+                bodyInput.addEventListener('input', function () { sync(); notifyDirty(); });
+                block.querySelector('.about-section-del').addEventListener('click', function () {
+                    model.splice(index, 1);
+                    render();
+                    serialize();
+                    notifyDirty();
+                });
+                wrap.appendChild(block);
+            });
+        }
+
+        addBtn.addEventListener('click', function () {
+            model.push({title: '', body: ''});
+            render();
+            serialize();
+            notifyDirty();
+            var blocks = wrap.querySelectorAll('.about-section-block');
+            var last = blocks[blocks.length - 1];
+            if (last) {
+                last.scrollIntoView({behavior: 'smooth', block: 'center'});
+                last.querySelector('.about-section-title').focus();
             }
         });
 
@@ -831,6 +1826,9 @@ function themeConfig($form)
     $form->setAttribute('class', 'ying-settings');
 
     $themeOptions = \Widget\Options::alloc();
+    if (is_array($themeOptions->aboutExtraSections)) {
+        $themeOptions->aboutExtraSections = json_encode($themeOptions->aboutExtraSections, JSON_UNESCAPED_UNICODE);
+    }
     $fontLibrary = yingFontLibraryFromOptions($themeOptions);
     $fontSourceOptions = yingFontSourceOptions();
     $currentSource = yingFontSource($themeOptions);
@@ -1111,35 +2109,25 @@ function themeConfig($form)
         }
     }
 
-    $jsonListRule = function ($value): bool {
-        $value = trim((string)$value);
-        if ($value === '') {
-            return true;
-        }
-        $data = json_decode($value, true);
-        if (!is_array($data)) {
+    $contactsRule = function ($value): bool {
+        $data = yingJsonList((string)$value);
+        if ($data === null) {
             return false;
         }
+        $types = yingContactTypes();
         foreach ($data as $item) {
             if (!is_array($item)) {
                 return false;
             }
-        }
-        return true;
-    };
-
-    $contactIconRule = function ($value): bool {
-        $value = trim((string)$value);
-        if ($value === '') {
-            return true;
-        }
-        $data = json_decode($value, true);
-        if (!is_array($data)) {
-            return false;
-        }
-        foreach ($data as $item) {
-            if (!is_array($item) || ($item['type'] ?? '') !== 'link') {
-                continue;
+            $type = $item['type'] ?? 'link';
+            if (!is_string($type) || !array_key_exists($type, $types)) {
+                return false;
+            }
+            if (isset($item['url']) && !is_string($item['url'])) {
+                return false;
+            }
+            if (isset($item['icon']) && !is_string($item['icon'])) {
+                return false;
             }
             $icon = isset($item['icon']) && is_string($item['icon']) ? trim($item['icon']) : '';
             if ($icon !== '' && !yingUrlIsSafe($icon)) {
@@ -1149,10 +2137,27 @@ function themeConfig($form)
         return true;
     };
 
+    $friendsRule = function ($value): bool {
+        $data = yingJsonList((string)$value);
+        if ($data === null) {
+            return false;
+        }
+        foreach ($data as $item) {
+            if (!is_array($item)) {
+                return false;
+            }
+            foreach (['name', 'url', 'desc', 'avatar'] as $key) {
+                if (isset($item[$key]) && !is_string($item[$key])) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    };
+
     $contactsEl = new \Typecho\Widget\Helper\Form\Element\Text('contactsJson', null, $contactsInit, _t('联系方式管理'), _t('点击下方按钮添加联系方式，选择类型、填写链接后保存；自定义链接可填写图标 URL。桌面端显示在头像行右侧，窄屏自动换行。'));
     $contactsEl->description(yingContactsEditorHtml());
-    $contactsEl->addRule($jsonListRule, _t('联系方式数据格式错误，请重新添加后再保存。'));
-    $contactsEl->addRule($contactIconRule, _t('自定义链接的图标需以 http://、https:// 或 / 开头'));
+    $contactsEl->addRule($contactsRule, _t('联系方式数据格式错误：根节点须为列表，type/url/icon 须为字符串，且 type 须在白名单内。'));
     $form->addInput($contactsEl);
 
     $copyright = new \Typecho\Widget\Helper\Form\Element\Text(
@@ -1187,7 +2192,7 @@ function themeConfig($form)
         null,
         '75',
         _t('卡片透明度'),
-        _t('填 0 到 100 之间的数字（百分比，越小越透出背景图），留空默认 75。')
+        _t('填 0 到 100 之间的百分比（越小越透出背景图；0 按最低 1% 处理），留空默认 75。旧版小于 1 的小数会按比例兼容。')
     );
     $form->addInput($cardAlpha);
 
@@ -1205,6 +2210,135 @@ function themeConfig($form)
     );
     $form->addInput($newPostMark->multiMode());
 
+    $stickyPosts = new \Typecho\Widget\Helper\Form\Element\Text(
+        'stickyPosts',
+        null,
+        null,
+        _t('置顶文章'),
+        _t('填写文章 ID 或别名（slug），用逗号分隔；按填写顺序显示，最多 3 篇。例：12, 34, my-post。置顶展示仅在首页第一页，文章会从首页普通列表移除；加密文章自动跳过。文章 ID 可在编辑页地址的 cid= 后查看。')
+    );
+    $stickyPosts->addRule(function ($value): bool {
+        return count(yingStickyTokens((string)$value)) <= 3;
+    }, _t('置顶文章最多 3 篇，请用逗号分隔。'));
+    $stickyPosts->input->setAttribute('placeholder', '12, 34, my-post');
+    $form->addInput($stickyPosts);
+
+    $aboutIntro = new \Typecho\Widget\Helper\Form\Element\Textarea(
+        'aboutIntro',
+        null,
+        null,
+        _t('关于页导语'),
+        _t('支持 Markdown；留空不显示。填写任一关于页内容字段后，前台改用这里的结构化内容。')
+    );
+    $form->addInput($aboutIntro);
+
+    $aboutQuote = new \Typecho\Widget\Helper\Form\Element\Text(
+        'aboutQuote',
+        null,
+        null,
+        _t('关于页引言'),
+        _t('显示为导语下方的引用，纯文本；留空不显示。')
+    );
+    $form->addInput($aboutQuote);
+
+    $aboutTopics = new \Typecho\Widget\Helper\Form\Element\Textarea(
+        'aboutTopics',
+        null,
+        null,
+        _t('内容方向'),
+        _t('每行一条，格式：标题 | 说明；留空隐藏整个栏目。')
+    );
+    $form->addInput($aboutTopics);
+
+    $aboutTopicsTitle = new \Typecho\Widget\Helper\Form\Element\Text(
+        'aboutTopicsTitle',
+        null,
+        _t('这里写什么'),
+        _t('内容方向标题'),
+        _t('留空使用默认「这里写什么」。')
+    );
+    $form->addInput($aboutTopicsTitle);
+
+    $aboutTheme = new \Typecho\Widget\Helper\Form\Element\Textarea(
+        'aboutTheme',
+        null,
+        null,
+        _t('关于主题'),
+        _t('支持 Markdown；留空隐藏整个栏目。')
+    );
+    $form->addInput($aboutTheme);
+
+    $aboutThemeTitle = new \Typecho\Widget\Helper\Form\Element\Text(
+        'aboutThemeTitle',
+        null,
+        _t('关于这个主题'),
+        _t('主题介绍标题'),
+        _t('留空使用默认「关于这个主题」。')
+    );
+    $form->addInput($aboutThemeTitle);
+
+    $aboutStack = new \Typecho\Widget\Helper\Form\Element\Textarea(
+        'aboutStack',
+        null,
+        null,
+        _t('技术栈'),
+        _t('每行一条，格式：组件 | 内容；自动生成两列表格，留空隐藏整个栏目。')
+    );
+    $form->addInput($aboutStack);
+
+    $aboutStackTitle = new \Typecho\Widget\Helper\Form\Element\Text(
+        'aboutStackTitle',
+        null,
+        _t('技术栈'),
+        _t('技术栈标题'),
+        _t('留空使用默认「技术栈」。')
+    );
+    $form->addInput($aboutStackTitle);
+
+    $aboutSectionsStored = $themeOptions->aboutExtraSections;
+    $aboutSectionsInit = is_array($aboutSectionsStored)
+        ? json_encode($aboutSectionsStored, JSON_UNESCAPED_UNICODE)
+        : trim((string)$aboutSectionsStored);
+    if ($aboutSectionsInit === '') {
+        $aboutSectionsInit = '[]';
+    }
+    $aboutSectionsRule = function ($value): bool {
+        $data = yingJsonList((string)$value);
+        if ($data === null) {
+            return false;
+        }
+        foreach ($data as $item) {
+            if (!is_array($item)) {
+                return false;
+            }
+            foreach (['title', 'body'] as $key) {
+                if (isset($item[$key]) && !is_string($item[$key])) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    };
+    $aboutExtraSections = new \Typecho\Widget\Helper\Form\Element\Text(
+        'aboutExtraSections',
+        null,
+        $aboutSectionsInit,
+        _t('自定义内容板块'),
+        _t('可添加多个「标题 + 正文」板块，显示在技术栈之后、结尾寄语之前；正文支持 Markdown，留空不显示。')
+    );
+    $aboutExtraSections->description(yingAboutSectionsEditorHtml());
+    $aboutExtraSections->addRule($aboutSectionsRule, _t('自定义内容板块格式错误：根节点须为列表，标题和正文须为字符串。'));
+    $form->addInput($aboutExtraSections);
+
+    $aboutOutro = new \Typecho\Widget\Helper\Form\Element\Text(
+        'aboutOutro',
+        null,
+        null,
+        _t('结尾寄语'),
+        _t('支持 Markdown；显示在技术栈之后、统计与「完」之前，留空不显示。')
+    );
+    $form->addInput($aboutOutro);
+
     $siteStartDate = new \Typecho\Widget\Helper\Form\Element\Text(
         'siteStartDate',
         null,
@@ -1213,6 +2347,55 @@ function themeConfig($form)
         _t('关于页「运行」统计的起始日期，格式 YYYY-MM-DD（例如 2024-05-01）；留空则使用最早一篇文章的日期。')
     );
     $form->addInput($siteStartDate);
+
+    $aboutStats = new \Typecho\Widget\Helper\Form\Element\Checkbox(
+        'aboutStats',
+        [
+            'posts' => _t('文章篇数'),
+            'words' => _t('总字数'),
+            'days' => _t('运行时长'),
+        ],
+        ['posts', 'words', 'days'],
+        _t('关于页统计'),
+        _t('勾选要在关于页展示的统计项，可任选 1–3 项；全部不勾选则不显示。运行时长依赖上方「建站日期」。')
+    );
+    $form->addInput($aboutStats);
+
+    $aboutStatsPos = new \Typecho\Widget\Helper\Form\Element\Radio(
+        'aboutStatsPos',
+        ['top' => _t('标题下方'), 'end' => _t('文末落款')],
+        'top',
+        _t('关于页统计位置'),
+        _t('「文末落款」会放在正文结尾、居中「完」之前；「标题下方」紧贴关于页标题。')
+    );
+    $form->addInput($aboutStatsPos->multiMode());
+
+    $aboutStatsAlign = new \Typecho\Widget\Helper\Form\Element\Radio(
+        'aboutStatsAlign',
+        ['left' => _t('向左对齐'), 'center' => _t('居中'), 'right' => _t('向右对齐')],
+        'left',
+        _t('关于页统计对齐'),
+        _t('控制整块统计在关于页中的水平位置；点线与行内数字布局保持不变。')
+    );
+    $form->addInput($aboutStatsAlign->multiMode());
+
+    $aboutShowTimeline = new \Typecho\Widget\Helper\Form\Element\Radio(
+        'aboutShowTimeline',
+        ['on' => _t('显示'), 'off' => _t('隐藏')],
+        'on',
+        _t('站点足迹'),
+        _t('根据建站日期、最早文章与最近更新自动生成时间线；锁定文章只显示占位标题。数据不足时自动隐藏。')
+    );
+    $form->addInput($aboutShowTimeline->multiMode());
+
+    $aboutShowHeatmap = new \Typecho\Widget\Helper\Form\Element\Radio(
+        'aboutShowHeatmap',
+        ['on' => _t('显示'), 'off' => _t('隐藏')],
+        'on',
+        _t('文章活跃热力图'),
+        _t('使用已发布文章的创建日期生成近一年热力图，不读取 IP、评论或正文；无文章时自动隐藏。')
+    );
+    $form->addInput($aboutShowHeatmap->multiMode());
 
     $linksShow = new \Typecho\Widget\Helper\Form\Element\Radio(
         'linksShow',
@@ -1257,7 +2440,7 @@ function themeConfig($form)
 
     $friendsEl = new \Typecho\Widget\Helper\Form\Element\Text('friendsJson', null, $friendsInit, _t('友链管理'), _t('点击下方按钮添加友链，填写后保存即可；数据自动同步。'));
     $friendsEl->description(yingFriendsEditorHtml());
-    $friendsEl->addRule($jsonListRule, _t('友链数据格式错误，请重新添加后再保存。'));
+    $friendsEl->addRule($friendsRule, _t('友链数据格式错误：根节点须为列表，name/url/desc/avatar 须为字符串。'));
     $form->addInput($friendsEl);
 }
 
@@ -1276,6 +2459,11 @@ function themeConfigHandle(array $settings, bool $isInit): bool
 
     unset($settings['fontFile'], $settings['yingAdminSkin']);
     $settings['fontUrl'] = trim((string)($settings['fontUrl'] ?? ''));
+    $settings['stickyPosts'] = implode(', ', array_slice(
+        yingStickyTokens((string)($settings['stickyPosts'] ?? '')),
+        0,
+        3
+    ));
 
     $startDate = trim((string)($settings['siteStartDate'] ?? ''));
     if ($startDate !== '') {

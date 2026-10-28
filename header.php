@@ -1,15 +1,14 @@
 <?php if (!defined('__TYPECHO_ROOT_DIR__')) exit;
-$bgUrl = $this->options->bgUrl ? $this->options->bgUrl : $this->options->themeUrl . '/img/bg-default.jpg';
-$hasCustomBg = trim((string)$this->options->bgUrl) !== '';
-$bgCss = yingCssUrl($bgUrl);
-$fontSource = yingFontSource($this->options);
-$fontUrls = $fontSource === 'cdn' ? [] : yingFontUrls($this->options);
-// CDN 字体的 @font-face 在 css/zql-fonts.css（分片 + unicode-range），此处仍算作有网络字体
-$hasWebFont = ($fontSource === 'cdn') || !empty($fontUrls);
-$fontSrc = implode(', ', array_map(function ($url) {
-    return "url('" . yingCssUrl($url) . "')";
-}, $fontUrls));
-$readingFont = yingFontStack($hasWebFont);
+$chrome = yingThemeChrome($this->options);
+$bgUrl = $chrome['bgRaw'];
+$hasCustomBg = $chrome['hasCustomBg'];
+$bgCss = $chrome['bgCss'];
+$fontSource = $chrome['fontSource'];
+$fontUrls = $chrome['fontUrls'];
+$hasWebFont = $chrome['hasWebFont'];
+$fontSrc = $chrome['fontSrc'];
+$readingFont = $chrome['readingFont'];
+$cardAlpha = $chrome['cardAlpha'];
 $logoRaw = trim((string)$this->options->logoUrl);
 if (!yingUrlIsSafe($logoRaw)) {
     $logoRaw = $this->options->themeUrl . '/avatar.png';
@@ -21,12 +20,6 @@ if (!yingUrlIsSafe($faviconRaw)) {
 }
 $faviconUrl = htmlspecialchars($faviconRaw, ENT_QUOTES);
 $siteTitle = (string)$this->options->title;
-$alphaRaw = trim((string)$this->options->cardAlpha);
-$alphaVal = is_numeric($alphaRaw) && $alphaRaw !== '' ? floatval($alphaRaw) : 75;
-if ($alphaVal > 1) {
-    $alphaVal = $alphaVal / 100;
-}
-$cardAlpha = max(0.05, min(1, round($alphaVal, 2)));
 
 // 字体 CDN 预连接
 $preconnects = [];
@@ -82,8 +75,9 @@ if ($contactsList === null) {
     }
 }
 foreach ($contactsList as $c) {
-    $ctype = isset($c['type']) && isset($contactTypes[$c['type']]) ? $c['type'] : 'link';
-    $curl = isset($c['url']) ? trim((string)$c['url']) : '';
+    $ctype = isset($c['type']) && is_string($c['type']) && isset($contactTypes[$c['type']])
+        ? $c['type'] : 'link';
+    $curl = isset($c['url']) && is_string($c['url']) ? trim($c['url']) : '';
     if ($curl === '') {
         continue;
     }
@@ -144,7 +138,8 @@ if ($this->options->yiyanSource === 'api') {
                 'category' => _t('分类 %s 下的文章'),
                 'search'   => _t('包含关键字 %s 的文章'),
                 'tag'      => _t('标签 %s 下的文章'),
-                'author'   => _t('%s 发布的文章')
+                'author'   => _t('%s 发布的文章'),
+                'date'     => _t('归档：%s')
             ];
             $titleDefine = isset($titleDefines[$this->getArchiveType()]) ? $titleDefines[$this->getArchiveType()] : '%s';
             $titlePrefix = sprintf($titleDefine, $titleArchive) . ' - ';
@@ -183,7 +178,14 @@ if ($this->options->yiyanSource === 'api') {
     <?php endif; ?>
     :root { --reading-font: <?php echo $readingFont; ?>; --page-bg: url('<?php echo $bgCss; ?>'); --card-alpha: <?php echo $cardAlpha; ?>; }
     </style>
-    <?php $this->header('generator=&wlw=&rss2=&rss1=&atom='); ?>
+    <?php
+    $headerRule = 'generator=&wlw=&rss2=&rss1=&atom=';
+    if ($this->hidden) {
+        // 锁定内容不输出标签/摘要/社交卡片，避免通过 meta 泄露元信息。
+        $headerRule .= '&keywords=&description=&social=';
+    }
+    $this->header($headerRule);
+    ?>
     <?php
     $feedTitle = (!empty($titleArchive) ? $titleArchive . ' » ' : '') . $siteTitle;
     ?>

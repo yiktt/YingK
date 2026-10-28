@@ -32,11 +32,37 @@ $this->need('header.php');
         if (!in_array($markMode, ['none', 'stamp', 'relative', 'both'], true)) {
             $markMode = 'none';
         }
-        $hasPosts = false;
+        $isStickyHome = $this->is('index') || $this->is('front');
+        $stickyPosts = $isStickyHome ? yingStickyPosts() : [];
+        $stickyIds = [];
+        foreach ($stickyPosts as $stickyPost) {
+            $stickyIds[(int)$stickyPost['cid']] = true;
+        }
+        $showSticky = $isStickyHome && (int)$this->currentPage === 1 && !empty($stickyPosts);
+        $hasPosts = $showSticky;
         $tzOffset = (int)$this->options->timezone - (int)$this->options->serverTimezone;
         ?>
-        <?php while ($this->next()): $hasPosts = true; ?>
+        <?php if ($showSticky): ?>
+            <div class="sticky-posts" role="group" aria-label="<?php _e('置顶文章'); ?>">
+                <?php foreach ($stickyPosts as $stickyIndex => $stickyPost): ?>
+                    <div class="posts">
+                        <div class="post">
+                            <div class="time">
+                                <?php echo htmlspecialchars($stickyPost['date'], ENT_QUOTES, 'UTF-8'); ?>
+                                <?php if ($stickyIndex === 0): ?><span class="sticky-mark" title="<?php _e('置顶'); ?>"><?php _e('置顶'); ?></span><?php endif; ?>
+                            </div>
+                            <h2 class="post-title-link"><a href="<?php echo htmlspecialchars($stickyPost['permalink'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($stickyPost['title'], ENT_QUOTES, 'UTF-8'); ?></a></h2>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+        <?php while ($this->next()): ?>
             <?php
+            if (isset($stickyIds[(int)$this->cid])) {
+                continue;
+            }
+            $hasPosts = true;
             $days = yingNewPostDays((int)$this->created);
             $isNew = $days >= 0 && $days < 3;
             $showStamp = $isNew && ($markMode === 'stamp' || $markMode === 'both');
