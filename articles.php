@@ -15,7 +15,7 @@ if ($this->hidden) {
 
 $offset = (int)$this->options->timezone - (int)$this->options->serverTimezone;
 $db = \Typecho\Db::get();
-// 归档只取标题/时间/链接所需字段，不装载正文；分组与链接输出保持原样。
+// 归档只取标题/时间/链接和锁标识所需字段，不装载正文；分组与链接输出保持原样。
 $rows = $db->fetchAll($db->select('cid', 'title', 'slug', 'created', 'password', 'authorId')
     ->from('table.contents')
     ->where('status = ?', 'publish')
@@ -43,7 +43,8 @@ foreach ($rows as $row) {
         && !$this->user->pass('editor', true);
     $groups[$key]['count']++;
     $groups[$key]['posts'][] = [
-        'title' => $isHidden ? _t('此内容被密码保护') : (string)$row['title'],
+        'title' => (string)$row['title'],
+        'locked' => $isHidden,
         'permalink' => \Typecho\Router::url('post', $row, $this->options->index),
         'day' => date('m.d', $localTime),
     ];
@@ -73,7 +74,7 @@ foreach ($groups as $group) {
             <ul class="archive-list">
                 <?php foreach ($group['posts'] as $post): ?>
                 <li class="archive-entry">
-                    <a class="archive-link" href="<?php echo htmlspecialchars($post['permalink'], ENT_QUOTES); ?>"><?php echo htmlspecialchars($post['title']); ?></a>
+                    <a class="archive-link" href="<?php echo htmlspecialchars($post['permalink'], ENT_QUOTES); ?>"><?php echo htmlspecialchars($post['title']); ?><?php if ($post['locked']): ?><span class="post-lock-badge" title="<?php _e('需密码访问'); ?>" aria-label="<?php _e('需密码访问'); ?>"><?php _e('密'); ?></span><?php endif; ?></a>
                     <span class="archive-day"><?php echo htmlspecialchars($post['day']); ?></span>
                 </li>
                 <?php endforeach; ?>

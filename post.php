@@ -2,23 +2,39 @@
 
 $isLockedPost = $this->hidden;
 $lockError = false;
+$isLockSubmit = $isLockedPost ? ($this->request->isPost() && $this->request->is('yingLockPass')) : false;
 /** 口令表单的 CSRF 令牌：以固定 permalink 为盐，避免局部加载时地址栏无 token 导致校验漂移 */
 $lockToken = $isLockedPost ? (string)$this->security->getToken($this->permalink) : '';
 
 /** 锁定态口令校验：正确则写入核心同名的解锁 cookie 并回跳本页，错误则同页提示 */
-if ($isLockedPost && $this->request->isPost() && $this->request->is('yingLockPass')) {
+if ($isLockedPost && $isLockSubmit) {
     if (!hash_equals($lockToken, (string)$this->request->get('yingLockToken'))) {
         // 不信任外部 Referer；回到固定文章地址，避免开放跳转。
         $this->response->redirect($this->permalink);
     }
 
     if (hash_equals((string)$this->password, (string)$this->request->get('yingLockPass'))) {
-        \Typecho\Cookie::set('protectPassword_' . $this->cid, (string)$this->password);
+        // 值仍需与 Typecho 核心同名 cookie 一致；单独设置安全属性，避免 JS 读取口令。
+        $cookieName = \Typecho\Cookie::getPrefix() . 'protectPassword_' . $this->cid;
+        $cookieValue = (string)$this->password;
+        $cookieSecure = \Typecho\Cookie::getSecure()
+            || (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off')
+            || (int)($_SERVER['SERVER_PORT'] ?? 0) === 443;
+        $_COOKIE[$cookieName] = $cookieValue;
+        setcookie($cookieName, $cookieValue, [
+            'expires' => 0,
+            'path' => \Typecho\Cookie::getPath(),
+            'secure' => $cookieSecure,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
         $this->response->redirect($this->permalink);
     }
 
     $lockError = true;
 }
+
+yingPrivateCacheHeaders();
 
 $this->need('header.php');
 ?>

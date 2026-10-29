@@ -57,7 +57,7 @@ $this->need('header.php');
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
-        <?php while ($this->next()): ?>
+        <?php while ($currentPost = $this->next()): ?>
             <?php
             if (isset($stickyIds[(int)$this->cid])) {
                 continue;
@@ -75,6 +75,10 @@ $this->need('header.php');
             } else {
                 $relDate = sprintf(_t('%d 天前'), $days);
             }
+            $postTitle = (string)$this->title;
+            if ($this->hidden && $isStickyHome) {
+                $postTitle = (string)($currentPost['title'] ?? $postTitle);
+            }
             ?>
             <div class="posts">
                 <div class="post">
@@ -82,7 +86,7 @@ $this->need('header.php');
                         <?php if ($showRelative): ?><span class="time-new" title="<?php echo $absDate; ?>"><span class="time-dot" aria-hidden="true"></span><?php echo htmlspecialchars($relDate, ENT_QUOTES); ?></span><?php else: ?><?php $this->date('Y年m月d日'); ?><?php endif; ?>
                         <?php if ($showStamp): ?><span class="new-mark" title="<?php _e('3 天内发布'); ?>"><?php _e('新'); ?></span><?php endif; ?>
                     </div>
-                    <h2 class="post-title-link"><a href="<?php $this->permalink(); ?>"><?php echo htmlspecialchars((string)$this->title, ENT_QUOTES, 'UTF-8'); ?></a></h2>
+                    <h2 class="post-title-link"><a href="<?php $this->permalink(); ?>"><?php echo htmlspecialchars($postTitle, ENT_QUOTES, 'UTF-8'); ?></a><?php if ($this->hidden): ?><span class="post-lock-badge" title="<?php _e('需密码访问'); ?>" aria-label="<?php _e('需密码访问'); ?>"><?php _e('密'); ?></span><?php endif; ?></h2>
                 </div>
             </div>
         <?php endwhile; ?>
@@ -90,9 +94,12 @@ $this->need('header.php');
             <p class="list-empty">暂无文章。</p>
         <?php endif; ?>
     </div>
+    <?php $totalPages = max(1, (int)$this->getTotalPage()); ?>
 </article>
+<?php if ($this->currentPage > 1 || $this->currentPage < $totalPages): ?>
 <ul class="pagination">
-    <li class="page-item page-previous"><?php $this->pageLink('上一页', 'prev'); ?></li>
-    <li class="page-item page-next"><?php $this->pageLink('下一页', 'next'); ?></li>
+    <?php if ($this->currentPage > 1): ?><li class="page-item page-previous"><?php $this->pageLink('上一页', 'prev'); ?></li><?php endif; ?>
+    <?php if ($this->currentPage < $totalPages): ?><li class="page-item page-next"><?php $this->pageLink('下一页', 'next'); ?></li><?php endif; ?>
 </ul>
+<?php endif; ?>
 <?php $this->need('footer.php'); ?>

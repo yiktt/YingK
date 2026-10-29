@@ -179,9 +179,18 @@ if ($this->options->yiyanSource === 'api') {
     :root { --reading-font: <?php echo $readingFont; ?>; --page-bg: url('<?php echo $bgCss; ?>'); --card-alpha: <?php echo $cardAlpha; ?>; }
     </style>
     <?php
-    $headerRule = 'generator=&wlw=&rss2=&rss1=&atom=';
+    if (!headers_sent()) {
+        header('X-Content-Type-Options: nosniff');
+        header('X-Frame-Options: SAMEORIGIN');
+        header('Referrer-Policy: strict-origin-when-cross-origin');
+    }
     if ($this->hidden) {
-        // 锁定内容不输出标签/摘要/社交卡片，避免通过 meta 泄露元信息。
+        yingPrivateCacheHeaders();
+    }
+    $headerRule = 'generator=&wlw=&rss2=&rss1=&atom=';
+    $isCustomContentPage = in_array((string)$this->template, ['about.php', 'articles.php', 'links.php'], true);
+    if ($this->hidden || $isCustomContentPage || $this->is('page', 'start-page')) {
+        // 锁定内容和正文不参与渲染的自定义页面不输出摘要/社交卡片，避免旧正文泄露。
         $headerRule .= '&keywords=&description=&social=';
     }
     $this->header($headerRule);

@@ -1184,8 +1184,8 @@ a.top-menu-btn:hover {
 /* 悬浮按钮组：移动端适配（须置于桌面规则之后） */
 
 @media (max-width: 880px) {
-    /* 移动端工具坞：默认收起，由联系方式行末尾的汉堡按钮展开；
-       展开后为竖排玻璃胶囊，具体位置由 JS 按按钮位置定位 */
+    /* 移动端工具坞：默认彻底移出渲染树（display:none），避免不可见的
+       玻璃底仍压在页头联系方式/汉堡上；展开时由 JS 按汉堡位置定位 */
     .top-menu {
         left: auto;
         right: 14px;
@@ -1194,18 +1194,22 @@ a.top-menu-btn:hover {
         gap: 2px;
         padding: 3px;
         border-radius: 999px;
-        opacity: 0;
-        visibility: hidden;
-        transform: translateY(-6px);
+        display: none;
         pointer-events: none;
-        transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
     }
 
     .top-menu.menu-open {
+        display: flex;
         opacity: 1;
         visibility: visible;
         transform: translateY(0);
         pointer-events: auto;
+        animation: dock-pop 0.18s ease-out;
+    }
+
+    @keyframes dock-pop {
+        from { opacity: 0; transform: translateY(-4px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 
     .top-menu-btn {
@@ -1414,6 +1418,10 @@ body.has-custom-bg .main {
 .pagination .page-previous {
     margin-right: 20px;
     padding-right: 20px;
+}
+
+.pagination .page-next {
+    margin-left: auto;
 }
 
 /* 上一页 / 下一页：悬停朱砂下划线（文字宽度，与文章标题同款） */
@@ -3051,4 +3059,19 @@ html.is-navigating .nav-progress {
     .pagination a {
         transition: none;
     }
+}
+
+/* 列表页密码文章锁标识 */
+.post-lock-badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 0 3px;
+    border: 1px solid var(--border-soft);
+    border-radius: 2px;
+    color: var(--faint);
+    font-size: 0.7em;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    line-height: 1.4;
+    vertical-align: 0.12em;
 }

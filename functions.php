@@ -522,6 +522,10 @@ function yingSiteStatsCachePath(): string
 
 function yingSiteStatsSignature(\Widget\Options $options, $db): string
 {
+    static $cached = null;
+    if ($cached !== null) {
+        return $cached;
+    }
     $row = $db->fetchRow($db->select(
         'COUNT(*) AS total',
         'MAX(modified) AS modified',
@@ -546,7 +550,7 @@ function yingSiteStatsSignature(\Widget\Options $options, $db): string
     }
     sort($protectedIds, SORT_NUMERIC);
 
-    return md5(json_encode([
+    return $cached = md5(json_encode([
         'total' => (int)($row['total'] ?? 0),
         'modified' => (int)($row['modified'] ?? 0),
         'maxcid' => (int)($row['maxcid'] ?? 0),
@@ -1149,9 +1153,126 @@ function yingAboutMarkdown(string $text): string
             $parser = new \Utils\HyperDown();
             $parser->enableHtml(false);
         }
-        return $parser->makeHtml($text);
+        return yingSanitizeAboutHtml($parser->makeHtml($text));
     }
     return '<p>' . nl2br(htmlspecialchars($text, ENT_QUOTES, 'UTF-8')) . '</p>';
+}
+
+/**
+ * HyperDown 在 enableHtml(false) 下仍会保留白名单标签和属性，
+ * 这里按标签/属性白名单重建 HTML，剥离事件、样式和危险协议。
+ */
+function yingSanitizeAboutHtml(string $html): string
+{
+    if ($html === '') {
+        return '';
+    }
+    if (!class_exists('\DOMDocument')) {
+        return '<p>' . nl2br(htmlspecialchars($html, ENT_QUOTES, 'UTF-8')) . '</p>';
+    }
+
+    $allowed = [
+        'p' => [], 'br' => [], 'strong' => [], 'b' => [], 'em' => [], 'i' => [],
+        'del' => [], 's' => [], 'div' => [], 'span' => [], 'sup' => [], 'sub' => [],
+        'code' => ['class'], 'pre' => ['class'], 'blockquote' => [],
+        'ul' => [], 'ol' => [], 'li' => [], 'a' => ['href', 'title'],
+        'h1' => [], 'h2' => [], 'h3' => [], 'h4' => [], 'h5' => [], 'h6' => [], 'hr' => [],
+        'table' => [], 'thead' => [], 'tbody' => [], 'tr' => [], 'th' => [], 'td' => [],
+        'img' => ['src', 'alt', 'title'],
+    ];
+
+    $doc = new \DOMDocument('1.0', 'UTF-8');
+    $previous = libxml_use_internal_errors(true);
+    $wrapped = '<?xml encoding="UTF-8"><div data-ying-md-root="1">' . $html . '</div>';
+    $loaded = $doc->loadHTML($wrapped, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD | LIBXML_NONET);
+    libxml_clear_errors();
+    libxml_use_internal_errors($previous);
+    if (!$loaded) {
+        return '<p>' . nl2br(htmlspecialchars($html, ENT_QUOTES, 'UTF-8')) . '</p>';
+    }
+
+    $root = null;
+    foreach ($doc->getElementsByTagName('div') as $div) {
+        if ($div->getAttribute('data-ying-md-root') === '1') {
+            $root = $div;
+            break;
+        }
+    }
+    if (!$root) {
+        return '<p>' . nl2br(htmlspecialchars($html, ENT_QUOTES, 'UTF-8')) . '</p>';
+    }
+
+    $sanitize = static function (\DOMNode $parent) use (&$sanitize, $allowed): void {
+        foreach (iterator_to_array($parent->childNodes) as $node) {
+            if ($node instanceof \DOMComment) {
+                $parent->removeChild($node);
+                continue;
+            }
+            if (!$node instanceof \DOMElement) {
+                continue;
+            }
+            $tag = strtolower($node->nodeName);
+            if (!array_key_exists($tag, $allowed)) {
+                // 未授权标签连同内容移除，避免 raw HTML 通过包裹标签复活。
+                $parent->removeChild($node);
+                continue;
+            }
+            foreach (iterator_to_array($node->attributes) as $attribute) {
+                $name = strtolower($attribute->nodeName);
+                $value = (string)$attribute->value;
+                if (!in_array($name, $allowed[$tag], true)) {
+                    $node->removeAttribute($attribute->nodeName);
+                    continue;
+                }
+                if ($name === 'class' && !preg_match('/^[A-Za-z0-9 _-]+$/', $value)) {
+                    $node->removeAttribute($attribute->nodeName);
+                    continue;
+                }
+                if (($name === 'href' || $name === 'src') && !yingAboutUrlIsSafe($value, $name === 'href')) {
+                    $node->removeAttribute($attribute->nodeName);
+                }
+            }
+            $sanitize($node);
+        }
+    };
+    $sanitize($root);
+
+    $output = '';
+    foreach ($root->childNodes as $child) {
+        $output .= (string)$doc->saveHTML($child);
+    }
+    return $output;
+}
+
+function yingAboutUrlIsSafe(string $url, bool $allowMail): bool
+{
+    $url = trim($url);
+    if ($url === '') {
+        return false;
+    }
+    // 浏览器会忽略控制字符/空白后再解析协议，必须在解析前拒绝。
+    if (preg_match('/[\x00-\x20\x7F]|\p{Z}/u', $url)) {
+        return false;
+    }
+    if (preg_match('/^(https?:|mailto:|tel:)/i', $url)) {
+        return $allowMail || preg_match('/^https?:/i', $url);
+    }
+    if (str_starts_with($url, '//') || str_starts_with($url, '/')
+        || str_starts_with($url, '#') || str_starts_with($url, '?')) {
+        return true;
+    }
+    return !preg_match('/^[a-z][a-z0-9+.-]*:/i', $url);
+}
+
+/**
+ * 文章页/锁定页不进入共享缓存：内容依赖 protectPassword cookie。
+ */
+function yingPrivateCacheHeaders(): void
+{
+    if (!headers_sent()) {
+        header('Cache-Control: private, no-store, max-age=0');
+        header('Vary: Cookie');
+    }
 }
 
 /**
@@ -1766,9 +1887,9 @@ function yingAboutSectionsEditorHtml(): string
                     '<div class="about-section-head"><strong>内容板块 ' + (index + 1) + '</strong>' +
                     '<button type="button" class="about-section-del">删除</button></div>' +
                     '<div class="about-section-field"><label>标题</label>' +
-                    '<input type="text" class="about-section-title" placeholder="例如：近况"></div>' +
+                    '<input type="text" class="about-section-title" maxlength="60" placeholder="例如：近况"></div>' +
                     '<div class="about-section-field"><label>正文</label>' +
-                    '<textarea class="about-section-body" rows="3" placeholder="每行一段，纯文本"></textarea></div>';
+                    '<textarea class="about-section-body" rows="3" maxlength="2000" placeholder="每行一段，纯文本"></textarea></div>';
                 var titleInput = block.querySelector('.about-section-title');
                 var bodyInput = block.querySelector('.about-section-body');
                 titleInput.value = typeof item.title === 'string' ? item.title : '';
@@ -1788,9 +1909,19 @@ function yingAboutSectionsEditorHtml(): string
                 });
                 wrap.appendChild(block);
             });
+            syncAddButton();
+        }
+
+        function syncAddButton() {
+            var full = model.length >= 20;
+            addBtn.disabled = rootInvalid || full;
+            addBtn.textContent = full ? '已达 20 个板块上限' : '+ 添加内容板块';
         }
 
         addBtn.addEventListener('click', function () {
+            if (model.length >= 20) {
+                return;
+            }
             model.push({title: '', body: ''});
             render();
             serialize();
@@ -2223,6 +2354,13 @@ function themeConfig($form)
     $stickyPosts->input->setAttribute('placeholder', '12, 34, my-post');
     $form->addInput($stickyPosts);
 
+    $aboutTextRule = function ($value): bool {
+        return mb_strlen(trim((string)$value), 'UTF-8') <= 2000;
+    };
+    $aboutTitleRule = function ($value): bool {
+        return mb_strlen(trim((string)$value), 'UTF-8') <= 60;
+    };
+
     $aboutIntro = new \Typecho\Widget\Helper\Form\Element\Textarea(
         'aboutIntro',
         null,
@@ -2230,6 +2368,7 @@ function themeConfig($form)
         _t('关于页导语'),
         _t('支持 Markdown；留空不显示。填写任一关于页内容字段后，前台改用这里的结构化内容。')
     );
+    $aboutIntro->addRule($aboutTextRule, _t('关于页文本字段最多 2000 字。'));
     $form->addInput($aboutIntro);
 
     $aboutQuote = new \Typecho\Widget\Helper\Form\Element\Text(
@@ -2239,6 +2378,7 @@ function themeConfig($form)
         _t('关于页引言'),
         _t('显示为导语下方的引用，纯文本；留空不显示。')
     );
+    $aboutQuote->addRule($aboutTextRule, _t('关于页文本字段最多 2000 字。'));
     $form->addInput($aboutQuote);
 
     $aboutTopics = new \Typecho\Widget\Helper\Form\Element\Textarea(
@@ -2248,6 +2388,7 @@ function themeConfig($form)
         _t('内容方向'),
         _t('每行一条，格式：标题 | 说明；留空隐藏整个栏目。')
     );
+    $aboutTopics->addRule($aboutTextRule, _t('关于页文本字段最多 2000 字。'));
     $form->addInput($aboutTopics);
 
     $aboutTopicsTitle = new \Typecho\Widget\Helper\Form\Element\Text(
@@ -2257,6 +2398,7 @@ function themeConfig($form)
         _t('内容方向标题'),
         _t('留空使用默认「这里写什么」。')
     );
+    $aboutTopicsTitle->addRule($aboutTitleRule, _t('关于页小标题最多 60 字。'));
     $form->addInput($aboutTopicsTitle);
 
     $aboutTheme = new \Typecho\Widget\Helper\Form\Element\Textarea(
@@ -2266,6 +2408,7 @@ function themeConfig($form)
         _t('关于主题'),
         _t('支持 Markdown；留空隐藏整个栏目。')
     );
+    $aboutTheme->addRule($aboutTextRule, _t('关于页文本字段最多 2000 字。'));
     $form->addInput($aboutTheme);
 
     $aboutThemeTitle = new \Typecho\Widget\Helper\Form\Element\Text(
@@ -2275,6 +2418,7 @@ function themeConfig($form)
         _t('主题介绍标题'),
         _t('留空使用默认「关于这个主题」。')
     );
+    $aboutThemeTitle->addRule($aboutTitleRule, _t('关于页小标题最多 60 字。'));
     $form->addInput($aboutThemeTitle);
 
     $aboutStack = new \Typecho\Widget\Helper\Form\Element\Textarea(
@@ -2284,6 +2428,7 @@ function themeConfig($form)
         _t('技术栈'),
         _t('每行一条，格式：组件 | 内容；自动生成两列表格，留空隐藏整个栏目。')
     );
+    $aboutStack->addRule($aboutTextRule, _t('关于页文本字段最多 2000 字。'));
     $form->addInput($aboutStack);
 
     $aboutStackTitle = new \Typecho\Widget\Helper\Form\Element\Text(
@@ -2293,6 +2438,7 @@ function themeConfig($form)
         _t('技术栈标题'),
         _t('留空使用默认「技术栈」。')
     );
+    $aboutStackTitle->addRule($aboutTitleRule, _t('关于页小标题最多 60 字。'));
     $form->addInput($aboutStackTitle);
 
     $aboutSectionsStored = $themeOptions->aboutExtraSections;
@@ -2328,6 +2474,28 @@ function themeConfig($form)
     );
     $aboutExtraSections->description(yingAboutSectionsEditorHtml());
     $aboutExtraSections->addRule($aboutSectionsRule, _t('自定义内容板块格式错误：根节点须为列表，标题和正文须为字符串。'));
+    $aboutSectionsLimitRule = function ($value): bool {
+        $data = yingJsonList((string)$value);
+        if (!is_array($data)) {
+            return true;
+        }
+        if (count($data) > 20) {
+            return false;
+        }
+        foreach ($data as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $title = $item['title'] ?? '';
+            $body = $item['body'] ?? '';
+            if ((is_string($title) && mb_strlen(trim($title), 'UTF-8') > 60)
+                || (is_string($body) && mb_strlen(trim($body), 'UTF-8') > 2000)) {
+                return false;
+            }
+        }
+        return true;
+    };
+    $aboutExtraSections->addRule($aboutSectionsLimitRule, _t('自定义内容板块最多 20 个，单个标题最多 60 字、正文最多 2000 字。'));
     $form->addInput($aboutExtraSections);
 
     $aboutOutro = new \Typecho\Widget\Helper\Form\Element\Text(
@@ -2337,7 +2505,15 @@ function themeConfig($form)
         _t('结尾寄语'),
         _t('支持 Markdown；显示在技术栈之后、统计与「完」之前，留空不显示。')
     );
+    $aboutOutro->addRule($aboutTextRule, _t('关于页文本字段最多 2000 字。'));
     $form->addInput($aboutOutro);
+
+    foreach ([$aboutIntro, $aboutQuote, $aboutTopics, $aboutTheme, $aboutStack, $aboutOutro] as $aboutTextField) {
+        $aboutTextField->setInputsAttribute('maxlength', '2000');
+    }
+    foreach ([$aboutTopicsTitle, $aboutThemeTitle, $aboutStackTitle] as $aboutTitleField) {
+        $aboutTitleField->setInputsAttribute('maxlength', '60');
+    }
 
     $siteStartDate = new \Typecho\Widget\Helper\Form\Element\Text(
         'siteStartDate',

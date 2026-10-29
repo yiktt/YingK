@@ -171,10 +171,11 @@ document.addEventListener('DOMContentLoaded', function () {
         topMenuEl.style.right = (window.innerWidth - rect.right) + 'px';
     }
 
-    function setHamburgerMenu(open) {
+    function setHamburgerMenu(open, restoreFocus) {
         if (!menuHamburger || !topMenuEl) {
             return;
         }
+        var hadFocusInside = topMenuEl.contains(document.activeElement);
         topMenuEl.classList.toggle('menu-open', open);
         menuHamburger.setAttribute('aria-expanded', open ? 'true' : 'false');
         if (open) {
@@ -183,6 +184,14 @@ document.addEventListener('DOMContentLoaded', function () {
             clearMenuPosition();
         }
         syncMenuItemsAccessibility();
+        if (open) {
+            var firstItem = topMenuEl.querySelector('.top-menu-items .top-menu-btn');
+            if (firstItem) {
+                firstItem.focus();
+            }
+        } else if (restoreFocus && hadFocusInside) {
+            menuHamburger.focus();
+        }
     }
 
     if (menuHandle && menuItems) {
@@ -203,7 +212,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // ===== 移动端汉堡菜单（联系方式行末尾，默认收起，展开后工具坞定位到按钮下方） =====
     if (menuHamburger && topMenuEl) {
         menuHamburger.addEventListener('click', function () {
-            setHamburgerMenu(!topMenuEl.classList.contains('menu-open'));
+            setHamburgerMenu(!topMenuEl.classList.contains('menu-open'), true);
         });
         document.addEventListener('click', function (e) {
             if (!isMobileMenu()) {
@@ -217,14 +226,14 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape' && topMenuEl.classList.contains('menu-open')) {
-                setHamburgerMenu(false);
+                setHamburgerMenu(false, true);
             }
         });
         var themeToggleBtn = document.getElementById('theme-toggle');
         if (themeToggleBtn) {
             themeToggleBtn.addEventListener('click', function () {
                 if (isMobileMenu()) {
-                    setHamburgerMenu(false);
+                    setHamburgerMenu(false, true);
                 }
             });
         }
