@@ -1,6 +1,8 @@
 # YingK
 
 > 一个安静、克制的 [Typecho](https://typecho.org/) 单栏博客主题。
+>
+> 原主题：[heysiu/Ying](https://github.com/heysiu/Ying)
 
 ## 快速开始
 
@@ -36,22 +38,4 @@ git clone https://github.com/yiktt/YingK.git YingK
 - **后台可调**：七组外观设置，涵盖置顶、统计、标记、背景、字体、透明度、页脚与备案号等。
 - **安全与隐私**：输出转义与协议白名单，关于页 Markdown 白名单清洗，锁文章 Cookie 使用 HttpOnly / SameSite=Lax，浏览量不存 IP。细节见[配置说明](docs/configuration.md)。
 
-## 兼容与性能
-
-- 已实测默认 `cid` / `slug` / 日期 / 分类固定链接；归档页只查询必要字段，不装载正文。
-- 无构建步骤、无运行时框架；无 JS 时页面与正文链接仍可读，键盘、焦点、减少动态效果等可访问性支持保留。
-- 主题目录约 7.8MB（含字体约 6.7MB）；默认 ZQL 字体按 `unicode-range` 分片按需加载，本地字体模式只加载选中文件，系统字体零下载。代码高亮按需加载。
-
-## 开发
-
-无构建步骤，直接修改 PHP、`css/main.css`、`js/app.js` 即可；升级或迁移时保持主题目录名不变，外观设置保存在 Typecho 数据库中。最近一次验证在 Typecho 1.3.0 + PHP 8.3.36 + SQLite 上完成，覆盖设置保存、锁定文章、固定链接、AJAX、关于页与响应式；Typecho 1.2.1 仅做源码对照。
-
-维护者：[@yiktt](https://github.com/yiktt) · [GitHub Issues](https://github.com/yiktt/YingK/issues)。
-
-## 原主题
-
-原主题 **Ying** 归 [heysiu/Ying](https://github.com/heysiu/Ying)，原仓库未声明许可证；原始设计与素材版权归原作者及贡献者，闭源或商业再分发前请先取得上游授权。
-
-## 许可
-
-YingK 的新增/修改代码以 **MIT** 发布，详见 [LICENSE](LICENSE)。默认字体 ZQL（走路带风小可爱简 Regular 子集，`assets/fonts/zql-c1.woff2` 等 3 个分片）随仓库分发并经 jsDelivr 加载，字体站标注商用须授权；可选 HarmonyOS Sans SC Medium 受 HarmonyOS Fonts License Agreement 约束。后台上传字体由站点管理员自行提供，保存在 `usr/uploads/fonts`，不属于本仓库。
+由 AI 生成。
