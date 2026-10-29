@@ -38,4 +38,6 @@ git clone https://github.com/yiktt/YingK.git YingK
 - **后台可调**：七组外观设置，涵盖置顶、统计、标记、背景、字体、透明度、页脚与备案号等。
 - **安全与隐私**：输出转义与协议白名单，关于页 Markdown 白名单清洗，锁文章 Cookie 使用 HttpOnly / SameSite=Lax，浏览量不存 IP。细节见[配置说明](docs/configuration.md)。
 
-由 AI 生成。
+---
+
+<p align="center"><sub>— 由 AI 生成 —</sub></p>
